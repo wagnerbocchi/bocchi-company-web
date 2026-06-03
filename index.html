@@ -22,7 +22,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
@@ -39,6 +39,7 @@
     </a>
     <nav class="nav__links" aria-label="Principal">
       <a href="#services">Serviços</a>
+      <a href="#projects">Projetos</a>
       <a href="#process">Como trabalhamos</a>
       <a href="#why">Por que a Bocchi</a>
       <a href="#about">Sobre</a>
@@ -55,6 +56,7 @@
   </div>
   <div class="nav__mobile" id="navMobile">
     <a href="#services">Serviços</a>
+    <a href="#projects">Projetos</a>
     <a href="#process">Como trabalhamos</a>
     <a href="#why">Por que a Bocchi</a>
     <a href="#about">Sobre</a>
@@ -189,6 +191,65 @@
           <li>Code review focado em segurança (SAST + manual)</li>
         </ul>
         <a href="#contact" class="service-card__link">Conversar sobre meu projeto →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============== PROJECTS ============== -->
+<section class="section" id="projects">
+  <div class="container">
+    <header class="section__head">
+      <span class="eyebrow reveal">Projetos</span>
+      <h2 class="section__title reveal">O que construímos quando não estamos atacando.</h2>
+      <p class="section__sub reveal">
+        Além dos engajamentos, desenvolvemos produtos próprios — ferramentas que nascem
+        da nossa prática ofensiva e que carregam a assinatura da Bocchi Company.
+      </p>
+    </header>
+
+    <div class="projects">
+      <article class="project-feature reveal">
+        <div class="project-feature__body">
+          <span class="project-badge">
+            <span class="project-badge__dot" aria-hidden="true"></span>
+            Em desenvolvimento
+          </span>
+          <h3 class="project-feature__title">
+            <svg class="project-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" role="img" aria-label="Awarenox">
+              <g aria-hidden="true">
+                <circle cx="32" cy="32" r="20.5" fill="none" stroke="#C9CCF2" stroke-width="2"/>
+                <path d="M30.5 21 A11 11 0 1 0 30.5 43 A13.5 13.5 0 0 1 30.5 21 Z" fill="#C9CCF2"/>
+                <circle cx="39.5" cy="32" r="2.6" fill="#FBC65C"/>
+              </g>
+              <text x="76" y="43.5" font-family="'Hanken Grotesk',ui-sans-serif,system-ui,sans-serif" font-size="40" fill="#EDEEF8" letter-spacing="-1.2">
+                <tspan font-weight="400">aware</tspan><tspan font-weight="600">nox</tspan>
+              </text>
+            </svg>
+          </h3>
+          <p class="project-feature__desc">
+            Plataforma de simulação de phishing e conscientização para empresas — uma
+            alternativa moderna ao GoPhish. Um projeto da Bocchi Company para medir e
+            reduzir o risco humano de forma contínua.
+          </p>
+          <ul class="project-tags">
+            <li>Simulação de phishing</li>
+            <li>Conscientização</li>
+            <li>Self-hosted</li>
+          </ul>
+          <div class="project-feature__actions">
+            <a href="https://awarenox.com" class="btn btn--primary" target="_blank" rel="noopener noreferrer">Visitar awarenox.com →</a>
+            <a href="#contact" class="btn btn--ghost">Falar sobre o projeto</a>
+          </div>
+        </div>
+        <div class="project-visual" aria-hidden="true">
+          <div class="project-visual__grid"></div>
+          <div class="project-visual__glow"></div>
+          <figure class="project-window">
+            <div class="project-window__bar"><span></span><span></span><span></span></div>
+            <img src="assets/img/awarenox-dashboard.webp" alt="" loading="lazy" width="2880" height="1800" class="project-window__shot" />
+          </figure>
+        </div>
       </article>
     </div>
   </div>
@@ -347,6 +408,7 @@
       <div class="footer__col">
         <h4>Empresa</h4>
         <a href="#about">Sobre</a>
+        <a href="#projects">Projetos</a>
         <a href="#process">Processo</a>
         <a href="#why">Diferenciais</a>
       </div>

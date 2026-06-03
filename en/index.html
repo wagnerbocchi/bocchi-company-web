@@ -22,7 +22,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../assets/css/style.css" />
 </head>
 <body>
@@ -39,6 +39,7 @@
     </a>
     <nav class="nav__links" aria-label="Primary">
       <a href="#services">Services</a>
+      <a href="#projects">Projects</a>
       <a href="#process">How we work</a>
       <a href="#why">Why Bocchi</a>
       <a href="#about">About</a>
@@ -55,6 +56,7 @@
   </div>
   <div class="nav__mobile" id="navMobile">
     <a href="#services">Services</a>
+    <a href="#projects">Projects</a>
     <a href="#process">How we work</a>
     <a href="#why">Why Bocchi</a>
     <a href="#about">About</a>
@@ -189,6 +191,65 @@
           <li>Security-focused code review (SAST + manual)</li>
         </ul>
         <a href="#contact" class="service-card__link">Discuss my project →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============== PROJECTS ============== -->
+<section class="section" id="projects">
+  <div class="container">
+    <header class="section__head">
+      <span class="eyebrow reveal">Projects</span>
+      <h2 class="section__title reveal">What we build when we're not attacking.</h2>
+      <p class="section__sub reveal">
+        Beyond engagements, we build our own products — tools born from our offensive
+        practice that carry the Bocchi Company signature.
+      </p>
+    </header>
+
+    <div class="projects">
+      <article class="project-feature reveal">
+        <div class="project-feature__body">
+          <span class="project-badge">
+            <span class="project-badge__dot" aria-hidden="true"></span>
+            In development
+          </span>
+          <h3 class="project-feature__title">
+            <svg class="project-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" role="img" aria-label="Awarenox">
+              <g aria-hidden="true">
+                <circle cx="32" cy="32" r="20.5" fill="none" stroke="#C9CCF2" stroke-width="2"/>
+                <path d="M30.5 21 A11 11 0 1 0 30.5 43 A13.5 13.5 0 0 1 30.5 21 Z" fill="#C9CCF2"/>
+                <circle cx="39.5" cy="32" r="2.6" fill="#FBC65C"/>
+              </g>
+              <text x="76" y="43.5" font-family="'Hanken Grotesk',ui-sans-serif,system-ui,sans-serif" font-size="40" fill="#EDEEF8" letter-spacing="-1.2">
+                <tspan font-weight="400">aware</tspan><tspan font-weight="600">nox</tspan>
+              </text>
+            </svg>
+          </h3>
+          <p class="project-feature__desc">
+            A phishing simulation and security awareness platform for companies — a
+            modern alternative to GoPhish. A Bocchi Company project to continuously
+            measure and reduce human risk.
+          </p>
+          <ul class="project-tags">
+            <li>Phishing simulation</li>
+            <li>Awareness</li>
+            <li>Self-hosted</li>
+          </ul>
+          <div class="project-feature__actions">
+            <a href="https://awarenox.com" class="btn btn--primary" target="_blank" rel="noopener noreferrer">Visit awarenox.com →</a>
+            <a href="#contact" class="btn btn--ghost">Talk about this project</a>
+          </div>
+        </div>
+        <div class="project-visual" aria-hidden="true">
+          <div class="project-visual__grid"></div>
+          <div class="project-visual__glow"></div>
+          <figure class="project-window">
+            <div class="project-window__bar"><span></span><span></span><span></span></div>
+            <img src="../assets/img/awarenox-dashboard.webp" alt="" loading="lazy" width="2880" height="1800" class="project-window__shot" />
+          </figure>
+        </div>
       </article>
     </div>
   </div>
@@ -348,6 +409,7 @@
       <div class="footer__col">
         <h4>Company</h4>
         <a href="#about">About</a>
+        <a href="#projects">Projects</a>
         <a href="#process">Process</a>
         <a href="#why">Differentiators</a>
       </div>

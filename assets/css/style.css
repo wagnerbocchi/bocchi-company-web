@@ -483,6 +483,164 @@ button { font-family: inherit; cursor: pointer; }
   transform: translateX(2px);
 }
 
+/* =========== PROJECTS =========== */
+.projects {
+  display: grid;
+  gap: 20px;
+}
+.project-feature {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 48px;
+  align-items: center;
+  padding: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse 90% 120% at 0% 0%, rgba(61, 90, 254, 0.16), transparent 60%),
+              linear-gradient(180deg, rgba(20, 30, 54, 0.7), rgba(11, 18, 32, 0.5));
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color 0.4s var(--ease), transform 0.4s var(--ease);
+}
+.project-feature::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(61, 90, 254, 0.5), transparent);
+}
+.project-feature:hover {
+  border-color: rgba(107, 138, 255, 0.4);
+  transform: translateY(-3px);
+}
+
+.project-feature__body { position: relative; z-index: 1; }
+.project-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #F4C77B;
+  padding: 6px 12px;
+  border: 1px solid rgba(244, 199, 123, 0.3);
+  border-radius: 999px;
+  background: rgba(244, 199, 123, 0.08);
+  margin-bottom: 22px;
+}
+.project-badge__dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #F4C77B;
+  box-shadow: 0 0 0 3px rgba(244, 199, 123, 0.2);
+  animation: project-pulse 2.4s var(--ease) infinite;
+}
+@keyframes project-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+.project-feature__title {
+  margin: 0 0 16px;
+  line-height: 0;
+}
+.project-logo {
+  height: 48px;
+  width: auto;
+}
+.project-feature__desc {
+  font-size: 16.5px;
+  color: var(--text-md);
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 520px;
+}
+.project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.project-tags li {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-md);
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.project-feature__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Product preview (real app screenshot in a window frame) */
+.project-visual {
+  position: relative;
+  align-self: stretch;
+  padding: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(7, 9, 15, 0.6), rgba(15, 23, 42, 0.4));
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.project-visual__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, #000 30%, transparent 75%);
+}
+.project-visual__glow {
+  position: absolute;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(61, 90, 254, 0.4), transparent 60%);
+  filter: blur(70px);
+  z-index: -1;
+}
+.project-window {
+  position: relative;
+  margin: 0;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-2);
+  box-shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+}
+.project-window__bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--line);
+}
+.project-window__bar span {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.project-window__shot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* =========== PROCESS / STEPS =========== */
 .steps {
   display: grid;
@@ -749,6 +907,8 @@ button { font-family: inherit; cursor: pointer; }
   .section__head { margin-bottom: 48px; }
 
   .services { grid-template-columns: 1fr; }
+  .project-feature { grid-template-columns: 1fr; gap: 32px; padding: 36px 28px; }
+  .project-visual { min-height: 200px; order: -1; }
   .steps { grid-template-columns: repeat(2, 1fr); }
   .features { grid-template-columns: repeat(2, 1fr); }
 
