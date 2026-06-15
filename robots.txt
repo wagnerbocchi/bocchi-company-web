@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /send.php
+Disallow: /smtp.php
+Disallow: /bocchi-smtp.example.php
+
+Sitemap: https://bocchi.company/sitemap.xml

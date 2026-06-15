@@ -1,0 +1,28 @@
+# ======================================================================
+# Bocchi Company — security headers, error page, backend file protection
+# ======================================================================
+
+# --- Security response headers ---
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()"
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'sha256-wxj41/fG+C0CgQVjbFLk/RQpR8CSNoTCdvIDXI3GjBU='; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+</IfModule>
+
+# --- Custom error page ---
+ErrorDocument 404 /404.html
+
+# --- Block direct HTTP access to backend include / secret / diagnostic files ---
+# (PHP `require` still works — this only blocks web requests.)
+<FilesMatch "^(smtp\.php|smtp-diag.*\.php|bocchi-smtp.*\.php)$">
+  Require all denied
+</FilesMatch>
+
+# --- Never serve dotfiles / VCS metadata ---
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 /\.git

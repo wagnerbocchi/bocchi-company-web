@@ -11,10 +11,19 @@
 <meta property="og:title" content="Bocchi Company — Offensive cybersecurity and software engineering" />
 <meta property="og:description" content="Pentest, red teaming, and secure software development. We find the flaw before it becomes an incident." />
 <meta property="og:type" content="website" />
-<meta property="og:image" content="../assets/logos/horizontal-color-on-dark.svg" />
+<meta property="og:image" content="https://bocchi.company/assets/img/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:site_name" content="Bocchi Company" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://bocchi.company/assets/img/og-cover.png" />
 <meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://bocchi.company/en/" />
 
 <link rel="icon" type="image/svg+xml" href="../assets/logos/mark-color.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/logos/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/logos/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/logos/apple-touch-icon.png" />
 
 <link rel="canonical" href="https://bocchi.company/en/" />
 <link rel="alternate" hreflang="pt-BR" href="https://bocchi.company/" />
@@ -24,9 +33,36 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="../assets/css/style.css?v=5" />
+<link rel="stylesheet" href="../assets/css/style.css?v=7" />
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfessionalService",
+      "@id": "https://bocchi.company/#org",
+      "name": "Bocchi Company",
+      "url": "https://bocchi.company/",
+      "logo": "https://bocchi.company/assets/logos/mark-color.svg",
+      "image": "https://bocchi.company/assets/img/og-cover.png",
+      "email": "contato@bocchi.company",
+      "description": "Offensive cybersecurity and software engineering \u2014 pentest, red teaming, phishing campaigns, and secure software development.",
+      "areaServed": "BR",
+      "founder": { "@id": "https://bocchi.company/#wagner" },
+      "sameAs": [ "https://awarenox.com" ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://bocchi.company/#wagner",
+      "name": "Wagner Bocchi",
+      "jobTitle": "Founder, offensive security researcher & DevSecOps",
+      "worksFor": { "@id": "https://bocchi.company/#org" },
+      "sameAs": [ "https://www.linkedin.com/in/wagner-bocchi" ]
+    }
+  ]
+}</script>
 </head>
 <body>
+<a class="skip-link" href="#top">Skip to content</a>
 
 <!-- ============== NAV ============== -->
 <header class="nav" id="nav">
@@ -245,7 +281,7 @@
           <div class="project-visual__glow"></div>
           <figure class="project-window">
             <div class="project-window__bar"><span></span><span></span><span></span></div>
-            <img src="../assets/img/awarenox-dashboard.webp" alt="" loading="lazy" width="2880" height="1800" class="project-window__shot" />
+            <img src="../assets/img/awarenox-dashboard.webp" alt="Awarenox dashboard showing phishing campaigns and awareness metrics" loading="lazy" width="2880" height="1800" class="project-window__shot" />
           </figure>
         </div>
       </article>
@@ -337,6 +373,6 @@
   </div>
 </footer>
 
-<script src="../assets/js/main.js?v=5" defer></script>
+<script src="../assets/js/main.js?v=7" defer></script>
 </body>
 </html>

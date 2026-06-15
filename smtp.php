@@ -7,6 +7,9 @@
  * Apenas define funções — seguro para incluir.
  */
 
+// Bloqueia acesso HTTP direto — só pode ser incluído por send.php.
+if (!defined('BOCCHI_SEND')) { http_response_code(404); exit; }
+
 if (!function_exists('bocchi_load_smtp_config')) {
 
     /**

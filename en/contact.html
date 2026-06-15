@@ -11,10 +11,19 @@
 <meta property="og:title" content="Contact — Bocchi Company" />
 <meta property="og:description" content="Get in touch with Bocchi Company. Response within 24 business hours, NDA available." />
 <meta property="og:type" content="website" />
-<meta property="og:image" content="../assets/logos/horizontal-color-on-dark.svg" />
+<meta property="og:image" content="https://bocchi.company/assets/img/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:site_name" content="Bocchi Company" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://bocchi.company/assets/img/og-cover.png" />
 <meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://bocchi.company/en/contact.html" />
 
 <link rel="icon" type="image/svg+xml" href="../assets/logos/mark-color.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/logos/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/logos/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/logos/apple-touch-icon.png" />
 
 <link rel="canonical" href="https://bocchi.company/en/contact.html" />
 <link rel="alternate" hreflang="pt-BR" href="https://bocchi.company/contato.html" />
@@ -24,9 +33,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="../assets/css/style.css?v=5" />
+<link rel="stylesheet" href="../assets/css/style.css?v=7" />
 </head>
 <body>
+<a class="skip-link" href="#top">Skip to content</a>
 
 <!-- ============== NAV ============== -->
 <header class="nav" id="nav">
@@ -96,7 +106,7 @@
 </section>
 
 <!-- ============== CONTACT ============== -->
-<section class="section" id="contact" style="padding-top: 64px;">
+<section class="section section--contact-pad" id="contact">
   <div class="container">
     <div id="form-ok" class="form-flash form-flash--ok" role="status">Message sent — we'll get back to you within 24 business hours.</div>
     <div id="form-err" class="form-flash form-flash--err" role="alert">We couldn't send your message. Please try again or email contato@bocchi.company.</div>
@@ -127,21 +137,23 @@
       <form class="contact-form reveal" id="contactForm" action="../send.php" method="post" novalidate>
         <input type="hidden" name="lang" value="en" />
         <div class="field field--hp" aria-hidden="true">
-          <label>Do not fill this field<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          <label>Do not fill this field<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" /></label>
         </div>
+
+        <p class="form-legend">* required fields</p>
 
         <div class="form-grid">
           <div class="field">
             <label for="cf-name">Name *</label>
-            <input id="cf-name" name="name" type="text" required autocomplete="name" placeholder="Your name" />
+            <input id="cf-name" name="name" type="text" required autocomplete="name" maxlength="100" aria-required="true" placeholder="Your name" />
           </div>
           <div class="field">
             <label for="cf-email">Email *</label>
-            <input id="cf-email" name="email" type="email" required autocomplete="email" placeholder="you@company.com" />
+            <input id="cf-email" name="email" type="email" required autocomplete="email" maxlength="150" aria-required="true" placeholder="you@company.com" />
           </div>
           <div class="field">
             <label for="cf-company">Company</label>
-            <input id="cf-company" name="company" type="text" autocomplete="organization" placeholder="Optional" />
+            <input id="cf-company" name="company" type="text" autocomplete="organization" maxlength="150" placeholder="Optional" />
           </div>
           <div class="field">
             <label for="cf-topic">Interest</label>
@@ -156,7 +168,7 @@
 
         <div class="field">
           <label for="cf-message">Message *</label>
-          <textarea id="cf-message" name="message" rows="5" required placeholder="Tell us a bit about your scenario, assets, and goal."></textarea>
+          <textarea id="cf-message" name="message" rows="5" required maxlength="4000" aria-required="true" spellcheck="true" placeholder="Tell us a bit about your scenario, assets, and goal."></textarea>
         </div>
 
         <div class="form-foot">
@@ -214,6 +226,6 @@
   </div>
 </footer>
 
-<script src="../assets/js/main.js?v=5" defer></script>
+<script src="../assets/js/main.js?v=7" defer></script>
 </body>
 </html>

@@ -61,6 +61,27 @@ function oneline($v) {
     return trim(str_replace(array("\r", "\n", "\0"), ' ', (string) $v));
 }
 
+// Limite simples por IP (anti-abuso): N envios por janela de tempo.
+function bocchi_rate_ok($ip, $max, $window) {
+    $dir = sys_get_temp_dir() . '/bocchi_rl';
+    if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
+    $file = $dir . '/' . hash('sha256', (string) $ip);
+    $now = time();
+    $hits = array();
+    if (is_file($file)) {
+        $data = json_decode((string) @file_get_contents($file), true);
+        if (is_array($data)) {
+            foreach ($data as $t) {
+                if (is_int($t) && $t > $now - $window) { $hits[] = $t; }
+            }
+        }
+    }
+    if (count($hits) >= $max) { return false; }
+    $hits[] = $now;
+    @file_put_contents($file, json_encode($hits), LOCK_EX);
+    return true;
+}
+
 $name    = oneline(isset($_POST['name']) ? $_POST['name'] : '');
 $email   = oneline(isset($_POST['email']) ? $_POST['email'] : '');
 $company = oneline(isset($_POST['company']) ? $_POST['company'] : '');
@@ -68,11 +89,21 @@ $topic   = oneline(isset($_POST['topic']) ? $_POST['topic'] : '');
 $message = trim((string) (isset($_POST['message']) ? $_POST['message'] : ''));
 
 $valid = true;
-if (mb_strlen($name) < 2) $valid = false;
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $valid = false;
-if (mb_strlen($message) < $MIN_MESSAGE) $valid = false;
+if (mb_strlen($name) < 2 || mb_strlen($name) > 100) $valid = false;
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 150) $valid = false;
+if (mb_strlen($company) > 150) $valid = false;
+if (mb_strlen($topic) > 80) $valid = false;
+if (mb_strlen($message) < $MIN_MESSAGE || mb_strlen($message) > 4000) $valid = false;
 if (!$valid) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 422, $t['fields']);
+}
+
+// Anti-abuso: no máximo 5 envios por IP por hora.
+$clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+if (!bocchi_rate_ok($clientIp, 5, 3600)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 429,
+        $lang === 'en' ? 'Too many messages from your network. Please try again later.'
+                       : 'Muitas mensagens da sua rede. Tente novamente mais tarde.');
 }
 
 $topicLabel = $topic !== '' ? $topic : ($lang === 'en' ? 'Not specified' : 'Não especificado');
@@ -95,6 +126,7 @@ $body = implode("\n", $bodyLines);
 $subject = '[Site] ' . ($lang === 'en' ? 'New contact' : 'Novo contato') . ' — ' . $topicLabel;
 $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
 
+define('BOCCHI_SEND', true);
 require_once __DIR__ . '/smtp.php';
 $smtp = bocchi_load_smtp_config(__DIR__);
 

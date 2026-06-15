@@ -15,15 +15,21 @@
   // ======= NAV: mobile menu =======
   const burger = document.getElementById('navBurger');
   const mobile = document.getElementById('navMobile');
+  const closeMenu = () => {
+    mobile?.classList.remove('is-open');
+    burger?.setAttribute('aria-expanded', 'false');
+  };
   burger?.addEventListener('click', () => {
     const open = mobile.classList.toggle('is-open');
     burger.setAttribute('aria-expanded', String(open));
+    if (open) { const first = mobile.querySelector('a'); if (first) first.focus(); }
   });
-  mobile?.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      mobile.classList.remove('is-open');
-      burger.setAttribute('aria-expanded', 'false');
-    });
+  mobile?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobile?.classList.contains('is-open')) {
+      closeMenu();
+      burger?.focus();
+    }
   });
 
   // ======= MAGNETIC BUTTONS =======
@@ -88,6 +94,7 @@
           const good = el && test(el.value.trim());
           const wrap = el && el.closest('.field');
           if (wrap) wrap.classList.toggle('field--invalid', !good);
+          if (el) el.setAttribute('aria-invalid', good ? 'false' : 'true');
           if (!good) ok = false;
         });
       return ok;
@@ -96,6 +103,7 @@
     form.addEventListener('input', (e) => {
       const wrap = e.target.closest && e.target.closest('.field');
       if (wrap) wrap.classList.remove('field--invalid');
+      if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid');
     });
 
     form.addEventListener('submit', (e) => {
@@ -132,6 +140,17 @@
         });
     });
   }
+
+  // ======= FOUNDER PHOTO FALLBACK (replaces inline onerror, CSP-friendly) =======
+  document.querySelectorAll('.founder__photo').forEach((img) => {
+    const showFallback = () => {
+      img.style.display = 'none';
+      const mono = img.nextElementSibling;
+      if (mono) mono.style.display = 'flex';
+    };
+    img.addEventListener('error', showFallback);
+    if (img.complete && img.naturalWidth === 0) showFallback();
+  });
 
   // ======= YEAR =======
   const yearEl = document.getElementById('year');
