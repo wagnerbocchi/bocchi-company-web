@@ -4,22 +4,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#0A0E1C" />
-<title>Bocchi Company — Cibersegurança ofensiva e engenharia de software</title>
-<meta name="description" content="Bocchi Company é uma consultoria de cibersegurança ofensiva. Pentest, red teaming, campanhas de phishing controlado e desenvolvimento de software seguro." />
+<title>Serviços — Bocchi Company</title>
+<meta name="description" content="Pentest e red teaming, campanhas de phishing controlado e desenvolvimento de software seguro. Conheça os serviços e o processo da Bocchi Company." />
 <meta name="author" content="Bocchi Company" />
 
-<meta property="og:title" content="Bocchi Company — Cibersegurança ofensiva e engenharia de software" />
-<meta property="og:description" content="Pentest, red teaming e desenvolvimento seguro. Encontramos a falha antes que vire incidente." />
+<meta property="og:title" content="Serviços — Bocchi Company" />
+<meta property="og:description" content="Pentest & Red Teaming, Campanhas de Phishing e Desenvolvimento de Software seguro." />
 <meta property="og:type" content="website" />
 <meta property="og:image" content="assets/logos/horizontal-color-on-dark.svg" />
 <meta property="og:locale" content="pt_BR" />
 
 <link rel="icon" type="image/svg+xml" href="assets/logos/mark-color.svg" />
 
-<link rel="canonical" href="https://bocchi.company/" />
-<link rel="alternate" hreflang="pt-BR" href="https://bocchi.company/" />
-<link rel="alternate" hreflang="en" href="https://bocchi.company/en/" />
-<link rel="alternate" hreflang="x-default" href="https://bocchi.company/" />
+<link rel="canonical" href="https://bocchi.company/servicos.html" />
+<link rel="alternate" hreflang="pt-BR" href="https://bocchi.company/servicos.html" />
+<link rel="alternate" hreflang="en" href="https://bocchi.company/en/services.html" />
+<link rel="alternate" hreflang="x-default" href="https://bocchi.company/servicos.html" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -44,14 +44,14 @@
       </span>
     </a>
     <nav class="nav__links" aria-label="Principal">
-      <a href="servicos.html">Serviços</a>
+      <a href="servicos.html" class="is-active" aria-current="page">Serviços</a>
       <a href="projetos.html">Projetos</a>
       <a href="sobre.html">Sobre</a>
     </nav>
     <div class="nav__lang" aria-label="Idioma">
-      <a href="index.html" class="is-active" aria-current="page">PT</a>
+      <a href="servicos.html" class="is-active" aria-current="page">PT</a>
       <span aria-hidden="true">/</span>
-      <a href="en/index.html">EN</a>
+      <a href="en/services.html">EN</a>
     </div>
     <a href="contato.html" class="btn btn--primary nav__cta" data-magnetic>Falar com a gente</a>
     <button class="nav__burger" id="navBurger" aria-label="Abrir menu" aria-expanded="false">
@@ -59,13 +59,13 @@
     </button>
   </div>
   <div class="nav__mobile" id="navMobile">
-    <a href="servicos.html">Serviços</a>
+    <a href="servicos.html" class="is-active">Serviços</a>
     <a href="projetos.html">Projetos</a>
     <a href="sobre.html">Sobre</a>
     <a href="contato.html">Contato</a>
     <div class="nav__mobile-lang">
-      <a href="index.html" class="is-active">PT</a>
-      <a href="en/index.html">EN</a>
+      <a href="servicos.html" class="is-active">PT</a>
+      <a href="en/services.html">EN</a>
     </div>
     <a href="contato.html" class="btn btn--primary">Falar com a gente</a>
   </div>
@@ -73,83 +73,31 @@
 
 <main id="top">
 
-<!-- ============== HERO ============== -->
-<section class="hero">
-  <div class="hero__bg" aria-hidden="true"></div>
-  <div class="hero__grid" aria-hidden="true"></div>
-  <div class="hero__glow" aria-hidden="true"></div>
-  <svg class="hero__shield" viewBox="0 0 200 220" aria-hidden="true">
+<!-- ============== PAGE HERO ============== -->
+<section class="page-hero">
+  <div class="page-hero__bg" aria-hidden="true"></div>
+  <div class="page-hero__grid" aria-hidden="true"></div>
+  <svg class="page-hero__shield" viewBox="0 0 200 220" aria-hidden="true">
     <path d="M100 16 L176 44 V118 C176 156 144 184 100 200 C56 184 24 156 24 118 V44 Z" fill="none" stroke="#6B8AFF" stroke-width="1.3"></path>
     <g fill="none" stroke="#6B8AFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M72 60 V148"></path><path d="M72 60 H110 C122 60 130 68 130 80 C130 92 122 100 110 100 H72"></path><path d="M72 100 H114 C128 100 138 110 138 124 C138 138 128 148 114 148 H72"></path></g>
     <g fill="#3D5AFE" opacity="0.7"><circle cx="86" cy="174" r="3.5"></circle><circle cx="100" cy="174" r="3.5"></circle><circle cx="114" cy="174" r="3.5"></circle></g>
   </svg>
-  <div class="container hero__inner">
-    <div class="hero__lead">
-      <div class="hero__eyebrow reveal">
-        <span class="hero__eyebrow-rule" aria-hidden="true"></span>
-        <span>Ofensivo · Red team · Engenharia</span>
-      </div>
-      <h1 class="hero__title reveal" data-reveal-delay="60">
-        Encontramos a falha<br />
-        <span class="grad">antes que vire incidente.</span>
-      </h1>
-      <p class="hero__sub reveal" data-reveal-delay="120">
-        A Bocchi Company atua na linha de frente da segurança digital — simulando os mesmos
-        ataques que adversários reais usariam contra a sua empresa, e construindo software
-        que nasce seguro por princípio.
-      </p>
-      <div class="hero__cta reveal" data-reveal-delay="180">
-        <a href="servicos.html" class="btn btn--primary" data-magnetic>Ver serviços</a>
-        <a href="contato.html" class="btn btn--ghost">Solicitar diagnóstico →</a>
-      </div>
+  <div class="container page-hero__inner">
+    <div class="hero__eyebrow reveal">
+      <span class="hero__eyebrow-rule" aria-hidden="true"></span>
+      <span>01 / Serviços</span>
     </div>
-
-    <div class="hero__stats reveal" data-reveal-delay="240">
-      <div class="stat">
-        <div class="stat__eyebrow">// COBERTURA</div>
-        <div class="stat__num">100%</div>
-        <div class="stat__label">Engajamentos com relatório executivo + técnico</div>
-      </div>
-      <div class="stat">
-        <div class="stat__eyebrow">// FRAMEWORKS</div>
-        <div class="stat__num">OWASP · NIST · MITRE</div>
-        <div class="stat__label">Metodologias e frameworks de referência</div>
-      </div>
-      <div class="stat">
-        <div class="stat__eyebrow">// PESQUISA</div>
-        <div class="stat__num">0-day mindset</div>
-        <div class="stat__label">Pesquisa contínua e descoberta de vulnerabilidades</div>
-      </div>
-    </div>
+    <h1 class="page-hero__title reveal" data-reveal-delay="60">Três frentes. <span class="ital">Um compromisso.</span></h1>
+    <p class="page-hero__sub reveal" data-reveal-delay="120">
+      Trabalhamos como uma extensão do seu time de segurança. Cada engajamento é
+      desenhado para o seu contexto, com escopo claro e entregas que viram ação.
+    </p>
   </div>
 </section>
 
-<!-- ============== TRUST STRIP ============== -->
-<div class="trust">
-  <div class="container trust__inner">
-    <span class="trust__label">Operamos alinhados a</span>
-    <div class="trust__items">
-      <span>OWASP&nbsp;ASVS</span><span class="sep" aria-hidden="true">·</span>
-      <span>NIST&nbsp;SP&nbsp;800-115</span><span class="sep" aria-hidden="true">·</span>
-      <span>MITRE&nbsp;ATT&amp;CK</span><span class="sep" aria-hidden="true">·</span>
-      <span>PTES</span><span class="sep" aria-hidden="true">·</span>
-      <span>OSSTMM</span>
-    </div>
-  </div>
-</div>
-
-<!-- ============== SERVICES OVERVIEW ============== -->
+<!-- ============== SERVICES ============== -->
 <section class="section" id="services">
   <div class="container">
-    <header class="section__head">
-      <span class="eyebrow reveal">01 / Serviços</span>
-      <h2 class="section__title reveal" data-reveal-delay="60">Três frentes. Um único compromisso: <span class="ital">proteger o que importa.</span></h2>
-      <p class="section__sub reveal" data-reveal-delay="120">
-        Trabalhamos como uma extensão do seu time de segurança. Cada engajamento é
-        desenhado para o seu contexto, com escopo claro e entregas que viram ação.
-      </p>
-    </header>
-
     <div class="services">
       <article class="service-card reveal">
         <span class="service-card__tick service-card__tick--tl" aria-hidden="true"></span>
@@ -160,10 +108,17 @@
         <div class="service-card__tag">01 — Ofensivo</div>
         <h3 class="service-card__title">Pentest &amp; Red Teaming</h3>
         <p class="service-card__desc">
-          Testes de intrusão controlados e operações de red team para validar a sua
-          capacidade real de detecção e resposta — web, mobile, API, cloud e Active Directory.
+          Testes de intrusão controlados em aplicações web, mobile, APIs, redes internas,
+          cloud e infraestrutura. Operações de red team para validar a sua capacidade
+          real de detecção e resposta.
         </p>
-        <a href="servicos.html" class="service-card__link">Saiba mais →</a>
+        <ul class="service-card__bullets">
+          <li>Web · Mobile · API · Cloud (AWS, Azure, GCP)</li>
+          <li>Active Directory e movimentação lateral</li>
+          <li>Adversary emulation alinhado ao MITRE ATT&amp;CK</li>
+          <li>Relatório executivo + plano de remediação priorizado</li>
+        </ul>
+        <a href="contato.html" class="service-card__link">Iniciar um engajamento →</a>
       </article>
 
       <article class="service-card reveal">
@@ -175,10 +130,17 @@
         <div class="service-card__tag">02 — Pessoas</div>
         <h3 class="service-card__title">Campanhas de Phishing</h3>
         <p class="service-card__desc">
-          Simulações de engenharia social realistas, customizadas para o seu setor.
-          Medimos o risco humano de verdade e devolvemos um plano para baixá-lo.
+          Simulações de engenharia social realistas, customizadas para o seu setor e
+          maturidade. Medimos o risco humano de verdade e devolvemos um plano para
+          baixá-lo, sem expor ninguém.
         </p>
-        <a href="servicos.html" class="service-card__link">Saiba mais →</a>
+        <ul class="service-card__bullets">
+          <li>Spear phishing, vishing e smishing autorais</li>
+          <li>Templates inspirados em ameaças reais do seu segmento</li>
+          <li>Métricas por departamento, gestor e cargo</li>
+          <li>Trilha de conscientização pós-campanha</li>
+        </ul>
+        <a href="contato.html" class="service-card__link">Quero rodar uma campanha →</a>
       </article>
 
       <article class="service-card reveal">
@@ -190,86 +152,63 @@
         <div class="service-card__tag">03 — Engenharia</div>
         <h3 class="service-card__title">Desenvolvimento de Software</h3>
         <p class="service-card__desc">
-          Produtos, automações e ferramentas internas com segurança como requisito de
-          primeira classe — não como camada adicional. Do MVP à plataforma.
+          Construímos produtos, automações e ferramentas internas com segurança como
+          requisito de primeira classe — não como camada adicional. Do MVP à plataforma.
         </p>
-        <a href="servicos.html" class="service-card__link">Saiba mais →</a>
-      </article>
-    </div>
-    <a href="servicos.html" class="section__more reveal">Ver todos os serviços e o nosso processo →</a>
-  </div>
-</section>
-
-<!-- ============== FEATURED PROJECT ============== -->
-<section class="section section--alt" id="projects">
-  <div class="container">
-    <header class="section__head">
-      <span class="eyebrow reveal">02 / Projetos</span>
-      <h2 class="section__title reveal" data-reveal-delay="60">O que construímos <span class="ital">quando não estamos atacando.</span></h2>
-      <p class="section__sub reveal" data-reveal-delay="120">
-        Além dos engajamentos, desenvolvemos produtos próprios — ferramentas que nascem
-        da nossa prática ofensiva e que carregam a assinatura da Bocchi Company.
-      </p>
-    </header>
-
-    <div class="projects">
-      <article class="project-feature reveal">
-        <div class="project-feature__body">
-          <span class="project-badge">
-            <span class="project-badge__dot" aria-hidden="true"></span>
-            Em desenvolvimento
-          </span>
-          <h3 class="project-feature__title">
-            <svg class="project-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" width="210" height="48" role="img" aria-label="Awarenox">
-              <g aria-hidden="true"><circle cx="32" cy="32" r="20.5" fill="none" stroke="#C9CCF2" stroke-width="2"/><path d="M30.5 21 A11 11 0 1 0 30.5 43 A13.5 13.5 0 0 1 30.5 21 Z" fill="#C9CCF2"/><circle cx="39.5" cy="32" r="2.6" fill="#FBC65C"/></g>
-              <text x="76" y="43.5" font-family="'Hanken Grotesk',ui-sans-serif,system-ui,sans-serif" font-size="40" fill="#EDEEF8" letter-spacing="-1.2"><tspan font-weight="400">aware</tspan><tspan font-weight="600">nox</tspan></text>
-            </svg>
-          </h3>
-          <p class="project-feature__desc">
-            Plataforma de simulação de phishing e conscientização para empresas — uma
-            alternativa moderna ao GoPhish. Um projeto da Bocchi Company para medir e
-            reduzir o risco humano de forma contínua.
-          </p>
-          <ul class="project-tags">
-            <li>Simulação de phishing</li>
-            <li>Conscientização</li>
-            <li>Self-hosted</li>
-          </ul>
-          <div class="project-feature__actions">
-            <a href="https://awarenox.com" class="btn btn--primary" target="_blank" rel="noopener noreferrer" data-magnetic>Visitar awarenox.com →</a>
-            <a href="projetos.html" class="btn btn--ghost">Ver no Projetos</a>
-          </div>
-        </div>
-        <div class="project-visual" aria-hidden="true">
-          <div class="project-visual__grid"></div>
-          <div class="project-visual__glow"></div>
-          <figure class="project-window">
-            <div class="project-window__bar"><span></span><span></span><span></span></div>
-            <img src="assets/img/awarenox-dashboard.webp" alt="" loading="lazy" width="2880" height="1800" class="project-window__shot" />
-          </figure>
-        </div>
+        <ul class="service-card__bullets">
+          <li>Aplicações web e APIs em Python, Node.js e Go</li>
+          <li>Automações de segurança e integração com SIEM/SOAR</li>
+          <li>Threat modeling e revisão de arquitetura</li>
+          <li>Code review focado em segurança (SAST + manual)</li>
+        </ul>
+        <a href="contato.html" class="service-card__link">Conversar sobre meu projeto →</a>
       </article>
     </div>
   </div>
 </section>
 
-<!-- ============== ABOUT TEASER ============== -->
-<section class="section" id="about-teaser">
+<!-- ============== PROCESS ============== -->
+<section class="section section--alt" id="process">
   <div class="container">
     <header class="section__head">
-      <span class="eyebrow reveal">Sobre a Bocchi Company</span>
-      <h2 class="section__title reveal" data-reveal-delay="60">Segurança feita por quem opera, <span class="ital">não por quem só audita.</span></h2>
+      <span class="eyebrow reveal">Como trabalhamos</span>
+      <h2 class="section__title reveal" data-reveal-delay="60">Um processo claro. <span class="ital">Sem caixa-preta.</span></h2>
       <p class="section__sub reveal" data-reveal-delay="120">
-        Somos uma boutique de segurança ofensiva e engenharia de software. Combinamos
-        prática ofensiva real com engenharia sólida para entregar o que parece raro no
-        mercado: uma única empresa que encontra a falha, explica e ajuda a corrigir.
+        Você sabe exatamente o que está sendo feito, em qual fase estamos e quais
+        riscos ainda estão abertos — do briefing ao relatório final.
       </p>
     </header>
-    <a href="sobre.html" class="section__more reveal">Conheça a empresa e quem está por trás →</a>
+
+    <ol class="steps">
+      <li class="step reveal">
+        <div class="step__num">01</div>
+        <h3 class="step__title">Diagnóstico &amp; escopo</h3>
+        <p class="step__desc">Entendemos o seu negócio, ativos críticos e maturidade. Definimos
+        objetivos, regras de engajamento e critérios de sucesso por escrito.</p>
+      </li>
+      <li class="step reveal">
+        <div class="step__num">02</div>
+        <h3 class="step__title">Reconhecimento</h3>
+        <p class="step__desc">Mapeamos a superfície de ataque com OSINT, enumeração ativa e
+        passiva. Identificamos vetores de entrada e priorizamos por risco.</p>
+      </li>
+      <li class="step reveal">
+        <div class="step__num">03</div>
+        <h3 class="step__title">Exploração controlada</h3>
+        <p class="step__desc">Executamos os ataques de forma documentada e reversível, com
+        canal de comunicação aberto e checkpoints definidos com o seu time.</p>
+      </li>
+      <li class="step reveal">
+        <div class="step__num">04</div>
+        <h3 class="step__title">Relatório &amp; remediação</h3>
+        <p class="step__desc">Entregamos relatório executivo, técnico e plano de ação
+        priorizado por CVSS e impacto de negócio. Acompanhamos a remediação se necessário.</p>
+      </li>
+    </ol>
   </div>
 </section>
 
-<!-- ============== CTA / CONTACT ============== -->
+<!-- ============== CTA ============== -->
 <section class="section cta" id="contact">
   <div class="container">
     <div class="cta__inner">
