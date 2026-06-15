@@ -10,3 +10,6 @@ bocchi-smtp.php
 Thumbs.db
 *.swp
 .vscode/
+
+# diagnóstico temporário (apagar após uso)
+smtp-diag*.php

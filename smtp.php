@@ -130,11 +130,12 @@ if (!function_exists('bocchi_load_smtp_config')) {
         $headers[] = 'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=';
         $headers[] = 'MIME-Version: 1.0';
         $headers[] = 'Content-Type: text/plain; charset=UTF-8';
-        $headers[] = 'Content-Transfer-Encoding: 8bit';
+        $headers[] = 'Content-Transfer-Encoding: base64';
 
-        $message = implode("\r\n", $headers) . "\r\n\r\n" . $body;
-        $message = preg_replace('/\r\n|\r|\n/', "\r\n", $message); // normaliza fim de linha
-        $message = preg_replace('/^\./m', '..', $message);         // dot-stuffing (RFC 5321)
+        // Corpo em base64: 7-bit, à prova de 8BITMIME e de dot-stuffing
+        // (o alfabeto base64 nunca produz linha começando com ".").
+        $encodedBody = rtrim(chunk_split(base64_encode($body), 76, "\r\n"));
+        $message = implode("\r\n", $headers) . "\r\n\r\n" . $encodedBody;
 
         fwrite($fp, $message . "\r\n.\r\n");
         if ($code($read()) !== 250) return $abort();
