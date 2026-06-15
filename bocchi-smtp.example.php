@@ -18,10 +18,18 @@
  *     o alias (contato@), desde que esteja como "Enviar e-mail como" no Gmail.
  */
 return array(
-    'host'       => 'smtp.gmail.com',
-    'port'       => 465,                        // 465 = SSL (recomendado) | 587 = STARTTLS
+    // RECOMENDADO (Workspace): SMTP relay — o remetente no-reply@ NÃO é "você",
+    // então o e-mail cai na CAIXA DE ENTRADA (não em "Todos os e-mails").
+    // Exige ativar o "Serviço de retransmissão SMTP" no Admin console com
+    // "Exigir autenticação SMTP".
+    'host'       => 'smtp-relay.gmail.com',
+    'port'       => 587,                        // STARTTLS
     'username'   => 'wagner@bocchi.company',    // conta REAL do Workspace (autenticação)
-    'password'   => 'COLE_A_APP_PASSWORD_AQUI', // 16 letras, sem espaços
-    'from_email' => 'contato@bocchi.company',   // alias remetente
+    'password'   => 'COLE_A_APP_PASSWORD_AQUI', // app password — 16 letras, sem espaços
+    'from_email' => 'no-reply@bocchi.company',  // remetente (não precisa ser caixa real)
     'from_name'  => 'Site Bocchi Company',
 );
+
+// Alternativa (SMTP comum, smtp.gmail.com:465/587): só envie de um endereço
+// que esteja em "Enviar e-mail como" no Gmail. Atenção: enviar de contato@
+// PARA contato@ (mesma conta) pode cair em "Todos os e-mails", não na Entrada.
