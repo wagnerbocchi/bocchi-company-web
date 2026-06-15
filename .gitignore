@@ -1,0 +1,12 @@
+# Credenciais — NUNCA versionar (segredos do formulário de contato)
+bocchi-smtp.php
+*.secret.php
+
+# Dependências / build
+/vendor/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/

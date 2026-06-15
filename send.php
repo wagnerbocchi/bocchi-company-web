@@ -10,9 +10,14 @@
  * Requisitos: PHP 7.4+ com mbstring (padrão na Hostinger).
  */
 
+// Produção: nunca exibir erros na tela (evita vazar qualquer dado); só logar.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 // ============================ CONFIG ============================
 $TO_EMAIL    = 'contato@bocchi.company';   // para onde as mensagens vão
-$FROM_EMAIL  = 'no-reply@bocchi.company';  // remetente: use um endereço @bocchi.company (passa SPF/DKIM do domínio)
+$FROM_EMAIL  = 'contato@bocchi.company';   // remetente do fallback mail() (use um endereço @bocchi.company)
 $FROM_NAME   = 'Site Bocchi Company';
 $MIN_MESSAGE = 10;                         // tamanho mínimo da mensagem
 // Entrega caindo em spam? Veja "USAR SMTP" no rodapé deste arquivo.
@@ -90,15 +95,23 @@ $body = implode("\n", $bodyLines);
 $subject = '[Site] ' . ($lang === 'en' ? 'New contact' : 'Novo contato') . ' — ' . $topicLabel;
 $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
 
-$headers = array(
-    'From: ' . $FROM_NAME . ' <' . $FROM_EMAIL . '>',
-    'Reply-To: ' . $email,           // já validado — seguro
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'X-Mailer: PHP',
-);
+require_once __DIR__ . '/smtp.php';
+$smtp = bocchi_load_smtp_config(__DIR__);
 
-$sent = @mail($TO_EMAIL, $encodedSubject, $body, implode("\r\n", $headers), '-f' . $FROM_EMAIL);
+if (is_array($smtp) && !empty($smtp['host'])) {
+    // Envio autenticado via SMTP (recomendado para domínio no Google Workspace).
+    $sent = bocchi_smtp_send($smtp, $TO_EMAIL, $subject, $body, $email, $name);
+} else {
+    // Fallback: mail() nativo (pode cair em spam sem SPF/DKIM alinhados).
+    $headers = array(
+        'From: ' . $FROM_NAME . ' <' . $FROM_EMAIL . '>',
+        'Reply-To: ' . $email,           // já validado — seguro
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+        'X-Mailer: PHP',
+    );
+    $sent = @mail($TO_EMAIL, $encodedSubject, $body, implode("\r\n", $headers), '-f' . $FROM_EMAIL);
+}
 
 if (!$sent) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 500, $t['fail']);
@@ -106,21 +119,10 @@ if (!$sent) {
 respond(true, $lang, $isAjax, $RETURN_PAGES, 200, '');
 
 /*
- * ===== USAR SMTP (entrega mais confiável) =====
- * O mail() funciona na maioria das hospedagens, mas pode cair em spam sem
- * SPF/DKIM bem configurados. Para enviar pela sua caixa SMTP da Hostinger:
- *   1. Baixe o PHPMailer (github.com/PHPMailer/PHPMailer) para /vendor/phpmailer.
- *   2. Troque o trecho do mail() por:
- *
- *   require __DIR__ . '/vendor/phpmailer/src/PHPMailer.php';
- *   require __DIR__ . '/vendor/phpmailer/src/SMTP.php';
- *   require __DIR__ . '/vendor/phpmailer/src/Exception.php';
- *   $m = new PHPMailer\PHPMailer\PHPMailer(true);
- *   $m->isSMTP();
- *   $m->Host = 'smtp.hostinger.com'; $m->SMTPAuth = true;
- *   $m->Username = 'no-reply@bocchi.company'; $m->Password = 'SUA_SENHA';
- *   $m->SMTPSecure = 'ssl'; $m->Port = 465; $m->CharSet = 'UTF-8';
- *   $m->setFrom($FROM_EMAIL, $FROM_NAME); $m->addAddress($TO_EMAIL);
- *   $m->addReplyTo($email, $name); $m->Subject = $subject; $m->Body = $body;
- *   $sent = $m->send();
+ * ===== ENVIO POR SMTP (Google Workspace) =====
+ * O envio autenticado é feito por smtp.php (sem libs externas) quando existe o
+ * arquivo de credenciais. Para ativar:
+ *   1. Copie bocchi-smtp.example.php para bocchi-smtp.php e preencha a app password.
+ *   2. Coloque bocchi-smtp.php UM NÍVEL ACIMA do public_html (fora da web).
+ * Sem esse arquivo, cai no mail() nativo acima.
  */
