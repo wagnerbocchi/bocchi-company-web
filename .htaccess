@@ -9,7 +9,12 @@
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()"
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'sha256-wxj41/fG+C0CgQVjbFLk/RQpR8CSNoTCdvIDXI3GjBU='; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+  # script-src sem hash inline: o único <script> inline do site é o JSON-LD,
+  # que o navegador trata como bloco de dados (não passa por script-src).
+  # O hash que existia aqui não cobria nada e ficava obsoleto a cada edição.
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 </IfModule>
 
 # --- Custom error page ---
