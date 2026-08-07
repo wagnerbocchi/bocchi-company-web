@@ -14,7 +14,26 @@
   # script-src sem hash inline: o único <script> inline do site é o JSON-LD,
   # que o navegador trata como bloco de dados (não passa por script-src).
   # O hash que existia aqui não cobria nada e ficava obsoleto a cada edição.
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  # Fontes agora são self-hosted: a CSP não precisa mais liberar o Google.
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+</IfModule>
+
+# --- Compressão ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml application/xml text/plain
+</IfModule>
+
+# --- Cache ---
+# HTML sempre revalidado: o conteúdo muda sem que a URL mude, e um HTML
+# preso em cache é o que faz o site parecer "não atualizado" após o deploy.
+# Assets são versionados por query string (?v=N), então podem ser imutáveis.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header always set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(css|js|woff2|webp|png|jpg|jpeg|svg|ico)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>
 
 # --- Clean URLs: /sobre em vez de /sobre.html ---
