@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Bocchi Company — Blog</title>
+  <link>https://bocchi.company/blog/</link>
+  <description>Artigos técnicos da Bocchi Company sobre segurança ofensiva, detecção e engenharia de software.</description>
+  <language>pt-BR</language>
+  <atom:link href="https://bocchi.company/feed.xml" rel="self" type="application/rss+xml" />
+  <item>
+    <title>Como este blog funciona</title>
+    <link>https://bocchi.company/blog/como-este-blog-funciona</link>
+    <guid isPermaLink="true">https://bocchi.company/blog/como-este-blog-funciona</guid>
+    <pubDate>Fri, 07 Aug 2026 12:00:00 GMT</pubDate>
+    <description>O blog da Bocchi não tem banco de dados, não roda PHP para servir um post e não aceita upload no servidor de produção. Este primeiro texto explica por que, e como escrever nele.</description>
+  </item>
+</channel>
+</rss>

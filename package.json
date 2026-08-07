@@ -1,0 +1,19 @@
+{
+  "name": "bocchi-company-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site da Bocchi Company. O site em si é estático; este package.json existe só para o gerador do blog.",
+  "type": "module",
+  "scripts": {
+    "build:blog": "node tools/build-blog.mjs",
+    "check:blog": "node tools/build-blog.mjs --check"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^15.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

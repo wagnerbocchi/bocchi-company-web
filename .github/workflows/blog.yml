@@ -1,0 +1,79 @@
+name: Blog
+
+# Gera o HTML do blog a partir do Markdown e commita o resultado no próprio
+# repositório. A ideia é que o repositório permaneça servível como está: seja
+# qual for o método de deploy (git pull no servidor, FTP, deploy automático da
+# hospedagem), os arquivos prontos já estão lá — nada precisa buildar no host.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'content/blog/**'
+      - 'tools/build-blog.mjs'
+      - 'assets/css/blog.css'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'sobre.html'          # o shell (nav/rodapé) das páginas do blog sai daqui
+      - 'en/about.html'
+  pull_request:
+    paths:
+      - 'content/blog/**'
+      - 'tools/build-blog.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: blog-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # Em pull request só validamos: nada é commitado a partir de um PR,
+      # inclusive porque um PR de fork não deve conseguir escrever no repo.
+      - name: Validar posts
+        if: github.event_name == 'pull_request'
+        run: npm run check:blog
+
+      - name: Gerar o blog
+        if: github.event_name != 'pull_request'
+        run: npm run build:blog
+
+      - name: Commitar o HTML gerado
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- blog en/blog feed.xml sitemap.xml; then
+            echo "Nada mudou no HTML gerado."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog en/blog feed.xml sitemap.xml
+          git commit -m "Blog: regenerar HTML a partir do Markdown
+
+          Commit automático do workflow .github/workflows/blog.yml.
+          Fonte: content/blog/. Não edite blog/*.html à mão — o próximo
+          build sobrescreve."
+          git push
+
+    # O job de build precisa de permissão de escrita só quando não é PR.
+    permissions:
+      contents: write

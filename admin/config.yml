@@ -1,0 +1,125 @@
+# Painel de conteúdo do blog da Bocchi Company.
+#
+# Este arquivo não contém segredo nenhum — ele é lido pelo navegador. O
+# client_secret do OAuth fica em bocchi-oauth.php, UM NÍVEL ACIMA do
+# public_html (ver admin/auth.php).
+
+backend:
+  name: github
+  repo: wagnerbocchi/bocchi-company-web
+  branch: main
+  # O broker de OAuth roda no próprio domínio: nenhum serviço de terceiro
+  # intermedia o login.
+  base_url: https://bocchi.company
+  auth_endpoint: admin/auth.php
+
+# Publicar direto no branch principal. Trocar para "editorial_workflow" se
+# um dia fizer sentido revisar posts por pull request antes do ar.
+publish_mode: simple
+
+media_folder: assets/img/blog
+public_folder: /assets/img/blog
+
+locale: pt
+
+# O build converte o Markdown em HTML estático (tools/build-blog.mjs), então
+# a extensão precisa continuar .md e o formato, frontmatter YAML.
+collections:
+  - name: blog
+    label: Blog
+    label_singular: Post
+    folder: content/blog
+    create: true
+    delete: true
+    extension: md
+    format: yaml-frontmatter
+    slug: '{{year}}-{{month}}-{{day}}-{{slug}}'
+    preview_path: 'blog/{{fields.slug}}'
+    summary: '{{title}} — {{date | date("DD/MM/YYYY")}}'
+    sortable_fields: ['date', 'title']
+    view_filters:
+      - label: Rascunhos
+        field: draft
+        pattern: true
+      - label: Publicados
+        field: draft
+        pattern: false
+    fields:
+      - label: Título
+        name: title
+        widget: string
+        hint: Aparece como <h1> do post e no <title> da página.
+
+      - label: Slug (URL)
+        name: slug
+        widget: string
+        pattern:
+          - '^[a-z0-9]+(-[a-z0-9]+)*$'
+          - 'Só minúsculas, números e hífen. Ex.: kerberoasting-na-pratica'
+        hint: Vira /blog/<slug>. Depois de publicado, mudar isso quebra o link antigo.
+
+      - label: Data
+        name: date
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+
+      - label: Idioma
+        name: lang
+        widget: select
+        default: pt
+        options:
+          - { label: 'Português', value: 'pt' }
+          - { label: 'English', value: 'en' }
+        hint: Define se o post entra em /blog/ ou em /en/blog/.
+
+      - label: Resumo
+        name: excerpt
+        widget: text
+        required: false
+        hint: Uma ou duas frases. Aparece na listagem, no preview de rede social e no RSS.
+
+      - label: Tags
+        name: tags
+        widget: list
+        required: false
+        summary: '{{fields.tag}}'
+        field: { label: Tag, name: tag, widget: string }
+
+      - label: Imagem de capa
+        name: cover
+        widget: image
+        required: false
+        media_library:
+          config:
+            max_file_size: 3145728   # 3 MB
+        hint: Proporção 16:10 fica melhor. WebP de preferência.
+
+      - label: Texto alternativo da capa
+        name: cover_alt
+        widget: string
+        required: false
+        hint: Descreve a imagem para quem usa leitor de tela. Deixe vazio se for puramente decorativa.
+
+      - label: Rascunho
+        name: draft
+        widget: boolean
+        default: true
+        hint: Enquanto marcado, o post NÃO é publicado — o build o ignora.
+
+      - label: Atualizado em
+        name: updated
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+        required: false
+        hint: Preencha só se revisar o post depois de publicado.
+
+      - label: Conteúdo
+        name: body
+        widget: markdown
+        hint: >-
+          Bloco de código: use cerca tripla com a linguagem (```python). O
+          destaque de sintaxe é aplicado no build, não no navegador.

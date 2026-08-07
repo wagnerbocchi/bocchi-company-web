@@ -1,5 +1,6 @@
-# Credenciais — NUNCA versionar (segredos do formulário de contato)
+# Credenciais — NUNCA versionar (formulário de contato e painel do blog)
 bocchi-smtp.php
+bocchi-oauth.php
 *.secret.php
 
 # Dependências / build
@@ -13,3 +14,6 @@ Thumbs.db
 
 # diagnóstico temporário (apagar após uso)
 smtp-diag*.php
+
+# Dependências do gerador do blog (instaladas no CI)
+/node_modules/
