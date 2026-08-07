@@ -17,6 +17,34 @@
   Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 </IfModule>
 
+# --- Clean URLs: /sobre em vez de /sobre.html ---
+# As regras 1 e 2 usam THE_REQUEST (a linha de requisição crua, que os
+# rewrites internos não alteram) para redirecionar SÓ o que o navegador
+# pediu com .html — sem isso a regra 4 realimentaria a 2 em loop.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1. /index.html -> /   e   /en/index.html -> /en/      (301)
+  RewriteCond %{THE_REQUEST} \s/+(.*?)index\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # 2. /pagina.html -> /pagina                            (301)
+  RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # 3. /pagina/ -> /pagina  (só quando pagina.html existe e não há
+  #    diretório real com esse nome — mantém uma URL canônica só)
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+  RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+  # 4. Serve pagina.html para /pagina, sem mudar a URL na barra.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteRule ^(.+)$ $1.html [L]
+</IfModule>
+
 # --- Custom error page ---
 ErrorDocument 404 /404.html
 

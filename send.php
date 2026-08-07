@@ -23,7 +23,7 @@ $MIN_MESSAGE = 10;                         // tamanho mínimo da mensagem
 // Entrega caindo em spam? Veja "USAR SMTP" no rodapé deste arquivo.
 // ===============================================================
 
-$RETURN_PAGES = array('pt' => 'contato.html', 'en' => 'en/contact.html');
+$RETURN_PAGES = array('pt' => 'contato', 'en' => 'en/contact');
 
 $isAjax = (
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
