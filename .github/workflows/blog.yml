@@ -5,23 +5,27 @@ name: Blog
 # qual for o método de deploy (git pull no servidor, FTP, deploy automático da
 # hospedagem), os arquivos prontos já estão lá — nada precisa buildar no host.
 
+# Sem allowlist de paths, de propósito. O filtro original listava só o que
+# afeta o BLOG — mas este workflow também empacota o deploy.zip, e aí qualquer
+# arquivo que vá para o public_html precisa disparar uma execução nova.
+#
+# A allowlist já causou um problema real: uma correção em admin/.htaccess não
+# disparou o workflow, e o deploy.zip disponível continuou com a versão
+# anterior do arquivo. Uma lista de exclusão erra para o lado seguro — no
+# máximo roda à toa, o que custa ~20 segundos.
+#
+# Cuidado ao mexer aqui: NÃO ignore "**/*.md" — content/blog/*.md é a fonte
+# dos posts.
 on:
   push:
     branches: [main]
-    paths:
-      - 'content/blog/**'
-      - 'tools/build-blog.mjs'
-      - 'assets/css/blog.css'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'sobre.html'          # o shell (nav/rodapé) das páginas do blog sai daqui
-      - 'en/about.html'
+    paths-ignore:
+      - 'docs/**'
+      - '.gitignore'
   pull_request:
-    paths:
-      - 'content/blog/**'
-      - 'tools/build-blog.mjs'
-      - 'package.json'
-      - 'package-lock.json'
+    paths-ignore:
+      - 'docs/**'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
@@ -50,6 +54,13 @@ jobs:
       - name: Validar posts
         if: github.event_name == 'pull_request'
         run: npm run check:blog
+
+      # Roda o empacotador no PR só para exercitar suas barreiras — o zip é
+      # descartado. É aqui que um arquivo de credencial que tenha ido parar
+      # dentro de assets/ por engano trava a esteira, antes do merge.
+      - name: Validar o pacote de deploy
+        if: github.event_name == 'pull_request'
+        run: npm run package
 
       - name: Gerar o blog
         if: github.event_name != 'pull_request'
