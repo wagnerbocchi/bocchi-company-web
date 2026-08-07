@@ -11,6 +11,17 @@
   Header always set Referrer-Policy "no-referrer"
   Header always set Cache-Control "no-store"
 
+  # O site inteiro roda com Cross-Origin-Opener-Policy: same-origin, que
+  # coloca o documento em um grupo de contexto isolado. O efeito colateral é
+  # que o popup de login, ao voltar do github.com, perde o window.opener — e
+  # sem ele o CMS nunca recebe o token, mostrando "autenticação cancelada".
+  #
+  # "same-origin-allow-popups" mantém a referência aos popups que ESTA página
+  # abre, sem dar a nenhum documento de outra origem uma referência para cá.
+  # É a relaxada mínima que faz um fluxo OAuth em popup funcionar, e vale só
+  # para /admin/ — o resto do site continua em "same-origin".
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+
   # script-src continua 'self', sem 'unsafe-eval' e sem 'unsafe-inline': o
   # bundle do CMS é servido do próprio domínio e roda assim (verificado).
   #
@@ -31,6 +42,9 @@
 <IfModule mod_headers.c>
   <Files "auth.php">
     Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    # O popup não pode declarar "same-origin": isso o jogaria em outro grupo de
+    # contexto ao voltar do GitHub e cortaria o window.opener de novo.
+    Header always set Cross-Origin-Opener-Policy "unsafe-none"
   </Files>
 </IfModule>
 
