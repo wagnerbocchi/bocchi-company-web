@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 64" role="img" aria-label="Sigmaward">
+  <title>Sigmaward</title>
+  <defs>
+    <linearGradient id="sigmaward-logo-grad" x1="14" y1="9.3" x2="50" y2="54.7" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34F0DA"/>
+      <stop offset="1" stop-color="#8C7BFF"/>
+    </linearGradient>
+  </defs>
+  <polyline points="48,14.7 16,14.7 33.3,32 16,49.3 48,49.3" fill="none" stroke="url(#sigmaward-logo-grad)" stroke-width="8.3" stroke-linejoin="miter" stroke-linecap="square" aria-hidden="true"/>
+  <text x="76" y="43.5" font-family="'Hanken Grotesk',ui-sans-serif,system-ui,sans-serif" font-size="40" font-weight="600" fill="#F2F6FC" letter-spacing="-0.8">Sigmaward</text>
+</svg>
