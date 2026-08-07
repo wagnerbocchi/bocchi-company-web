@@ -151,12 +151,29 @@ const md = new MarkdownIt({
   },
 });
 
+/**
+ * Um link é externo quando a ORIGEM difere da do site.
+ *
+ * Comparar por prefixo de string não serve: "https://bocchi.company" é
+ * prefixo de "https://bocchi.company.evil.com", que é outro site e passaria
+ * por interno. Parsear a URL e comparar a origem elimina a classe inteira
+ * de erro — inclusive variações com porta, credenciais ou caminho.
+ */
+const SITE_ORIGIN = new URL(SITE).origin;
+function isExternalLink(href) {
+  if (!/^https?:\/\//i.test(href)) return false;   // relativo, âncora, mailto:
+  try {
+    return new URL(href).origin !== SITE_ORIGIN;
+  } catch {
+    return true;   // não parseou: tratar como externo é o lado seguro
+  }
+}
+
 // Links externos abrem em nova aba com rel seguro; internos ficam como estão.
 const defaultLinkOpen = md.renderer.rules.link_open
   || ((tokens, idx, opts, _env, self) => self.renderToken(tokens, idx, opts));
 md.renderer.rules.link_open = (tokens, idx, opts, env, self) => {
-  const href = tokens[idx].attrGet('href') || '';
-  if (/^https?:\/\//i.test(href) && !href.startsWith(SITE)) {
+  if (isExternalLink(tokens[idx].attrGet('href') || '')) {
     tokens[idx].attrSet('target', '_blank');
     tokens[idx].attrSet('rel', 'noopener noreferrer');
   }
@@ -511,7 +528,34 @@ function write(rel, content) {
   if (prev !== content) fs.writeFileSync(full, content);
 }
 
+/**
+ * Autoteste da classificação de link externo. Roda junto com o build, custa
+ * microssegundos e trava a geração se alguém trocar a comparação por origem
+ * de volta por um startsWith — que é justamente o bug que o CodeQL pegou:
+ * "https://bocchi.company" é prefixo de "https://bocchi.company.evil.com".
+ */
+function selfTestLinks() {
+  const casos = [
+    ['https://bocchi.company/sobre', false],
+    ['https://bocchi.company', false],
+    ['https://bocchi.company.evil.com/phish', true],
+    ['https://bocchi.companyX.com/', true],
+    ['https://bocchi.company:8443/x', true],
+    ['https://evil.com/?u=https://bocchi.company', true],
+    ['https://sigmaward.com', true],
+    ['/blog/post', false],
+    ['#secao', false],
+    ['mailto:contato@bocchi.company', false],
+  ];
+  for (const [href, esperado] of casos) {
+    if (isExternalLink(href) !== esperado) {
+      fail(`autoteste de link: "${href}" deveria ser ${esperado ? 'externo' : 'interno'}`);
+    }
+  }
+}
+
 function main() {
+  selfTestLinks();
   const posts = readPosts();
   const published = posts.filter((p) => !p.draft);
   for (const p of published) p.rendered = renderBody(p);
