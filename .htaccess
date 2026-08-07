@@ -9,7 +9,59 @@
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()"
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'sha256-wxj41/fG+C0CgQVjbFLk/RQpR8CSNoTCdvIDXI3GjBU='; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+  # script-src sem hash inline: o único <script> inline do site é o JSON-LD,
+  # que o navegador trata como bloco de dados (não passa por script-src).
+  # O hash que existia aqui não cobria nada e ficava obsoleto a cada edição.
+  # Fontes agora são self-hosted: a CSP não precisa mais liberar o Google.
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+</IfModule>
+
+# --- Compressão ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml application/xml text/plain
+</IfModule>
+
+# --- Cache ---
+# HTML sempre revalidado: o conteúdo muda sem que a URL mude, e um HTML
+# preso em cache é o que faz o site parecer "não atualizado" após o deploy.
+# Assets são versionados por query string (?v=N), então podem ser imutáveis.
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header always set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(css|js|woff2|webp|png|jpg|jpeg|svg|ico)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+# --- Clean URLs: /sobre em vez de /sobre.html ---
+# As regras 1 e 2 usam THE_REQUEST (a linha de requisição crua, que os
+# rewrites internos não alteram) para redirecionar SÓ o que o navegador
+# pediu com .html — sem isso a regra 4 realimentaria a 2 em loop.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1. /index.html -> /   e   /en/index.html -> /en/      (301)
+  RewriteCond %{THE_REQUEST} \s/+(.*?)index\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # 2. /pagina.html -> /pagina                            (301)
+  RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # 3. /pagina/ -> /pagina  (só quando pagina.html existe e não há
+  #    diretório real com esse nome — mantém uma URL canônica só)
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+  RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+  # 4. Serve pagina.html para /pagina, sem mudar a URL na barra.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteRule ^(.+)$ $1.html [L]
 </IfModule>
 
 # --- Custom error page ---

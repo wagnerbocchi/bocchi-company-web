@@ -37,7 +37,11 @@ if (!function_exists('bocchi_load_smtp_config')) {
     /** Codifica nome de exibição para cabeçalho (RFC 2047 / quoting). */
     function bocchi_smtp_header_name($s)
     {
-        if (preg_match('/[^\x20-\x7E]/', $s)) {
+        // "=?" é encodado junto com o resto: um nome que JÁ seja um
+        // encoded-word válido em ASCII puro passaria cru e o cliente de
+        // e-mail o decodificaria na exibição — dando ao remetente controle
+        // sobre o nome mostrado (ex.: fingir "Suporte <contato@bocchi.company>").
+        if (preg_match('/[^\x20-\x7E]/', $s) || strpos($s, '=?') !== false) {
             return '=?UTF-8?B?' . base64_encode($s) . '?=';
         }
         if (preg_match('/[",:;<>@()\[\]\\\\]/', $s)) {
@@ -52,6 +56,12 @@ if (!function_exists('bocchi_load_smtp_config')) {
      */
     function bocchi_smtp_send($cfg, $to, $subject, $body, $replyEmail, $replyName)
     {
+        foreach (array('host', 'port', 'username', 'password', 'from_email') as $required) {
+            if (empty($cfg[$required])) {
+                error_log('SMTP config incompleta: falta "' . $required . '"');
+                return false;
+            }
+        }
         $host = $cfg['host'];
         $port = (int) $cfg['port'];
         $user = $cfg['username'];
@@ -59,11 +69,15 @@ if (!function_exists('bocchi_load_smtp_config')) {
         $fromEmail = $cfg['from_email'];
         $fromName  = isset($cfg['from_name']) ? $cfg['from_name'] : '';
 
-        $transport = ($port === 465) ? 'ssl://' : 'tcp://';
+        // 465 = TLS implícito. Qualquer outra porta exige STARTTLS antes do
+        // AUTH — nunca degradar para autenticação em texto claro.
+        $implicitTls = ($port === 465);
+        $transport = $implicitTls ? 'ssl://' : 'tcp://';
         $ctx = stream_context_create(array('ssl' => array(
             'verify_peer'      => true,
             'verify_peer_name' => true,
             'SNI_enabled'      => true,
+            'peer_name'        => $host,
         )));
         $fp = @stream_socket_client(
             $transport . $host . ':' . $port,
@@ -95,14 +109,24 @@ if (!function_exists('bocchi_load_smtp_config')) {
         if ($ehlo === '') $ehlo = 'localhost';
 
         $say('EHLO ' . $ehlo);
-        if ($code($read()) !== 250) return $abort();
+        $ehloResp = $read();
+        if ($code($ehloResp) !== 250) return $abort();
 
-        if ($port === 587) {
+        if (!$implicitTls) {
+            // Sem TLS implícito, STARTTLS é obrigatório: se o servidor não
+            // anunciar, aborta em vez de mandar as credenciais em claro.
+            if (stripos($ehloResp, 'STARTTLS') === false) {
+                error_log('SMTP: servidor não oferece STARTTLS na porta ' . $port . ' — abortando para não autenticar em claro');
+                return $abort();
+            }
             $say('STARTTLS');
             if ($code($read()) !== 220) return $abort();
             $crypto = STREAM_CRYPTO_METHOD_TLS_CLIENT;
             if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) $crypto |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
-            if (!@stream_socket_enable_crypto($fp, true, $crypto)) return $abort();
+            if (!@stream_socket_enable_crypto($fp, true, $crypto)) {
+                error_log('SMTP: STARTTLS falhou (handshake/certificado)');
+                return $abort();
+            }
             $say('EHLO ' . $ehlo);
             if ($code($read()) !== 250) return $abort();
         }

@@ -30,9 +30,9 @@
 <link rel="alternate" hreflang="en" href="https://bocchi.company/en/" />
 <link rel="alternate" hreflang="x-default" href="https://bocchi.company/" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="preload" href="../assets/fonts/hankengrotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="../assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="../assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="../assets/css/style.css?v=7" />
 <script type="application/ld+json">{
   "@context": "https://schema.org",
@@ -67,7 +67,7 @@
 <!-- ============== NAV ============== -->
 <header class="nav" id="nav">
   <div class="container nav__inner">
-    <a href="index.html" class="nav__brand" aria-label="Bocchi Company — home">
+    <a href="/en/" class="nav__brand" aria-label="Bocchi Company — home">
       <svg class="nav__mark" viewBox="0 0 200 220" aria-hidden="true">
         <path d="M100 16 L176 44 V118 C176 156 144 184 100 200 C56 184 24 156 24 118 V44 Z" fill="#0B1F5C" stroke="#3D5AFE" stroke-width="3"></path>
         <g fill="none" stroke="#EDF1F7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M72 60 V148"></path><path d="M72 60 H110 C122 60 130 68 130 80 C130 92 122 100 110 100 H72"></path><path d="M72 100 H114 C128 100 138 110 138 124 C138 138 128 148 114 148 H72"></path></g>
@@ -80,30 +80,30 @@
       </span>
     </a>
     <nav class="nav__links" aria-label="Primary">
-      <a href="services.html">Services</a>
-      <a href="projects.html">Projects</a>
-      <a href="about.html">About</a>
+      <a href="/en/services">Services</a>
+      <a href="/en/projects">Projects</a>
+      <a href="/en/about">About</a>
     </nav>
     <div class="nav__lang" aria-label="Language">
-      <a href="../index.html">PT</a>
+      <a href="/">PT</a>
       <span aria-hidden="true">/</span>
-      <a href="index.html" class="is-active" aria-current="page">EN</a>
+      <a href="/en/" class="is-active" aria-current="page">EN</a>
     </div>
-    <a href="contact.html" class="btn btn--primary nav__cta" data-magnetic>Get in touch</a>
+    <a href="/en/contact" class="btn btn--primary nav__cta" data-magnetic>Get in touch</a>
     <button class="nav__burger" id="navBurger" aria-label="Open menu" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
   </div>
   <div class="nav__mobile" id="navMobile">
-    <a href="services.html">Services</a>
-    <a href="projects.html">Projects</a>
-    <a href="about.html">About</a>
-    <a href="contact.html">Contact</a>
+    <a href="/en/services">Services</a>
+    <a href="/en/projects">Projects</a>
+    <a href="/en/about">About</a>
+    <a href="/en/contact">Contact</a>
     <div class="nav__mobile-lang">
-      <a href="../index.html">PT</a>
-      <a href="index.html" class="is-active">EN</a>
+      <a href="/">PT</a>
+      <a href="/en/" class="is-active">EN</a>
     </div>
-    <a href="contact.html" class="btn btn--primary">Get in touch</a>
+    <a href="/en/contact" class="btn btn--primary">Get in touch</a>
   </div>
 </header>
 
@@ -135,8 +135,8 @@
         that is secure by design.
       </p>
       <div class="hero__cta reveal" data-reveal-delay="180">
-        <a href="services.html" class="btn btn--primary" data-magnetic>Explore services</a>
-        <a href="contact.html" class="btn btn--ghost">Request a discovery call →</a>
+        <a href="/en/services" class="btn btn--primary" data-magnetic>Explore services</a>
+        <a href="/en/contact" class="btn btn--ghost">Request a discovery call →</a>
       </div>
     </div>
 
@@ -199,7 +199,7 @@
           Controlled penetration tests and red team operations to validate your real
           detection and response capability — web, mobile, API, cloud, and Active Directory.
         </p>
-        <a href="services.html" class="service-card__link">Learn more →</a>
+        <a href="/en/services" class="service-card__link">Learn more →</a>
       </article>
 
       <article class="service-card reveal">
@@ -214,7 +214,7 @@
           Realistic social engineering simulations, customized to your sector. We measure
           real human risk and deliver a plan to lower it — without putting anyone on the spot.
         </p>
-        <a href="services.html" class="service-card__link">Learn more →</a>
+        <a href="/en/services" class="service-card__link">Learn more →</a>
       </article>
 
       <article class="service-card reveal">
@@ -229,10 +229,10 @@
           Products, automations, and internal tooling with security as a first-class
           requirement — not an afterthought. From MVP to platform.
         </p>
-        <a href="services.html" class="service-card__link">Learn more →</a>
+        <a href="/en/services" class="service-card__link">Learn more →</a>
       </article>
     </div>
-    <a href="services.html" class="section__more reveal">See all services and our process →</a>
+    <a href="/en/services" class="section__more reveal">See all services and our process →</a>
   </div>
 </section>
 
@@ -256,7 +256,7 @@
             In development
           </span>
           <h3 class="project-feature__title">
-            <svg class="project-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 64" width="248" height="48" role="img" aria-label="Sigmaward">
+            <svg class="project-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" width="210" height="48" role="img" aria-label="Sigmaward">
               <defs>
                 <linearGradient id="sigmaward-grad" x1="14" y1="9.3" x2="50" y2="54.7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#34F0DA"/><stop offset="1" stop-color="#8C7BFF"/></linearGradient>
               </defs>
@@ -276,7 +276,7 @@
           </ul>
           <div class="project-feature__actions">
             <a href="https://sigmaward.com" class="btn btn--primary" target="_blank" rel="noopener noreferrer" data-magnetic>Visit sigmaward.com →</a>
-            <a href="projects.html" class="btn btn--ghost">See in Projects</a>
+            <a href="/en/projects" class="btn btn--ghost">See in Projects</a>
           </div>
         </div>
         <div class="project-visual" aria-hidden="true">
@@ -284,7 +284,7 @@
           <div class="project-visual__glow"></div>
           <figure class="project-window">
             <div class="project-window__bar"><span></span><span></span><span></span></div>
-            <img src="../assets/img/sigmaward-dashboard.webp" alt="Sigmaward Watchfloor showing the triage queue, volume by severity, and open cases" loading="lazy" width="1600" height="1000" class="project-window__shot" />
+            <img src="../assets/img/sigmaward-dashboard.webp" alt="" loading="lazy" width="1440" height="900" class="project-window__shot" />
           </figure>
         </div>
       </article>
@@ -313,7 +313,7 @@
           </ul>
           <div class="project-feature__actions">
             <a href="https://awarenox.com" class="btn btn--primary" target="_blank" rel="noopener noreferrer" data-magnetic>Visit awarenox.com →</a>
-            <a href="projects.html" class="btn btn--ghost">See in Projects</a>
+            <a href="/en/projects" class="btn btn--ghost">See in Projects</a>
           </div>
         </div>
         <div class="project-visual" aria-hidden="true">
@@ -321,7 +321,7 @@
           <div class="project-visual__glow"></div>
           <figure class="project-window">
             <div class="project-window__bar"><span></span><span></span><span></span></div>
-            <img src="../assets/img/awarenox-dashboard.webp" alt="Awarenox dashboard showing phishing campaigns and awareness metrics" loading="lazy" width="2880" height="1800" class="project-window__shot" />
+            <img src="../assets/img/awarenox-dashboard.webp" alt="" loading="lazy" width="1440" height="900" class="project-window__shot" />
           </figure>
         </div>
       </article>
@@ -341,7 +341,7 @@
         market: a single firm that finds the flaw, explains it, and helps fix it.
       </p>
     </header>
-    <a href="about.html" class="section__more reveal">Get to know the company and who's behind it →</a>
+    <a href="/en/about" class="section__more reveal">Get to know the company and who's behind it →</a>
   </div>
 </section>
 
@@ -360,7 +360,7 @@
         initial proposal — scope, approach, and pricing. No noise.
       </p>
       <div class="cta__actions reveal" data-reveal-delay="180">
-        <a href="contact.html" class="btn btn--primary btn--lg" data-magnetic>Get in touch</a>
+        <a href="/en/contact" class="btn btn--primary btn--lg" data-magnetic>Get in touch</a>
         <a href="mailto:contato@bocchi.company?subject=Inquiry%20to%20Bocchi%20Company" class="btn btn--ghost btn--lg">contato@bocchi.company</a>
       </div>
       <p class="cta__fineprint reveal" data-reveal-delay="220">NDA available before any sensitive information is shared.</p>
@@ -387,16 +387,16 @@
     <div class="footer__cols">
       <div class="footer__col">
         <h4>Navigation</h4>
-        <a href="services.html">Services</a>
-        <a href="projects.html">Projects</a>
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact</a>
+        <a href="/en/services">Services</a>
+        <a href="/en/projects">Projects</a>
+        <a href="/en/about">About</a>
+        <a href="/en/contact">Contact</a>
       </div>
       <div class="footer__col">
         <h4>Services</h4>
-        <a href="services.html">Pentest &amp; Red Teaming</a>
-        <a href="services.html">Phishing Campaigns</a>
-        <a href="services.html">Software Development</a>
+        <a href="/en/services">Pentest &amp; Red Teaming</a>
+        <a href="/en/services">Phishing Campaigns</a>
+        <a href="/en/services">Software Development</a>
       </div>
       <div class="footer__col">
         <h4>Contact</h4>

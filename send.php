@@ -23,7 +23,7 @@ $MIN_MESSAGE = 10;                         // tamanho mínimo da mensagem
 // Entrega caindo em spam? Veja "USAR SMTP" no rodapé deste arquivo.
 // ===============================================================
 
-$RETURN_PAGES = array('pt' => 'contato.html', 'en' => 'en/contact.html');
+$RETURN_PAGES = array('pt' => 'contato', 'en' => 'en/contact');
 
 $isAjax = (
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
@@ -61,25 +61,117 @@ function oneline($v) {
     return trim(str_replace(array("\r", "\n", "\0"), ' ', (string) $v));
 }
 
-// Limite simples por IP (anti-abuso): N envios por janela de tempo.
-function bocchi_rate_ok($ip, $max, $window) {
+// Diretório de estado do rate limit (criado com permissão restrita).
+function bocchi_rate_dir() {
     $dir = sys_get_temp_dir() . '/bocchi_rl';
     if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-    $file = $dir . '/' . hash('sha256', (string) $ip);
-    $now = time();
+    return $dir;
+}
+
+/**
+ * Salt persistente para o nome dos arquivos de contador.
+ * Sem ele o nome seria sha256(IP) puro — como o espaço IPv4 é enumerável,
+ * qualquer um que consiga listar o diretório confirmaria quais IPs
+ * contataram o site. O salt é gerado uma vez e fica só no disco (nunca no
+ * repositório). Se não der para persistir, cai para um valor por processo:
+ * o limite continua funcionando, só não sobrevive entre requisições.
+ */
+function bocchi_rate_salt() {
+    static $salt = null;
+    if ($salt !== null) { return $salt; }
+
+    // Fallback determinístico, usado só se o filesystem não colaborar. Não é
+    // secreto, mas nesse cenário os contadores também não persistem — o que
+    // importa é que todos os processos cheguem ao MESMO valor, senão cada um
+    // contaria em um arquivo diferente e o limite deixaria de valer.
+    $fallback = hash('sha256', 'bocchi-rl|' . __FILE__);
+    $path = bocchi_rate_dir() . '/.salt';
+
+    // "c+" cria sem truncar; o flock serializa a criação. Sem isso, requisições
+    // simultâneas em um diretório novo geram salts diferentes entre si.
+    $fh = @fopen($path, 'c+');
+    if (!$fh) { return $salt = $fallback; }
+    if (!@flock($fh, LOCK_EX)) { fclose($fh); return $salt = $fallback; }
+
+    $existing = stream_get_contents($fh);
+    if (is_string($existing) && strlen($existing) >= 32) {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+        return $salt = $existing;
+    }
+
+    try {
+        $salt = bin2hex(random_bytes(32));
+    } catch (Exception $e) {
+        $salt = $fallback;
+    }
+    ftruncate($fh, 0);
+    rewind($fh);
+    fwrite($fh, $salt);
+    fflush($fh);
+    flock($fh, LOCK_UN);
+    fclose($fh);
+    @chmod($path, 0600);
+    return $salt;
+}
+
+/**
+ * Chave de agrupamento do rate limit.
+ * IPv4 conta por endereço. IPv6 conta por /64: um único cliente costuma ter
+ * um /64 inteiro (2^64 endereços), então contar por /128 tornaria o limite
+ * inútil — bastaria trocar de endereço a cada envio.
+ */
+function bocchi_rate_key($ip) {
+    $bin = @inet_pton((string) $ip);
+    if ($bin === false) { return 'raw:' . $ip; }
+    if (strlen($bin) === 16) {
+        // IPv4 mapeado em IPv6 (::ffff:a.b.c.d) conta como IPv4.
+        if (substr($bin, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+            return 'v4:' . inet_ntop(substr($bin, 12));
+        }
+        return 'v6:' . bin2hex(substr($bin, 0, 8)); // prefixo /64
+    }
+    return 'v4:' . $ip;
+}
+
+/**
+ * Limite de N eventos por janela de tempo para uma chave.
+ * Leitura e escrita acontecem sob o MESMO flock — sem isso, requisições
+ * simultâneas leem o mesmo estado e todas passam.
+ *
+ * Falha aberta (retorna true) se o filesystem não colaborar: um formulário
+ * de contato quebrado custa mais que um limite não aplicado.
+ */
+function bocchi_rate_ok($key, $max, $window) {
+    $file = bocchi_rate_dir() . '/' . hash_hmac('sha256', $key, bocchi_rate_salt());
+    $fh = @fopen($file, 'c+');
+    if (!$fh) { return true; }
+    if (!@flock($fh, LOCK_EX)) { fclose($fh); return true; }
+
+    $now  = time();
     $hits = array();
-    if (is_file($file)) {
-        $data = json_decode((string) @file_get_contents($file), true);
-        if (is_array($data)) {
-            foreach ($data as $t) {
-                if (is_int($t) && $t > $now - $window) { $hits[] = $t; }
-            }
+    $raw  = stream_get_contents($fh);
+    $data = json_decode((string) $raw, true);
+    if (is_array($data)) {
+        foreach ($data as $t) {
+            if (is_int($t) && $t > $now - $window) { $hits[] = $t; }
         }
     }
-    if (count($hits) >= $max) { return false; }
-    $hits[] = $now;
-    @file_put_contents($file, json_encode($hits), LOCK_EX);
-    return true;
+
+    $ok = count($hits) < $max;
+    if ($ok) {
+        $hits[] = $now;
+        if (count($hits) > $max) { $hits = array_slice($hits, -$max); }
+        ftruncate($fh, 0);
+        rewind($fh);
+        fwrite($fh, json_encode($hits));
+        fflush($fh);
+    }
+
+    flock($fh, LOCK_UN);
+    fclose($fh);
+    @chmod($file, 0600);
+    return $ok;
 }
 
 $name    = oneline(isset($_POST['name']) ? $_POST['name'] : '');
@@ -98,12 +190,22 @@ if (!$valid) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 422, $t['fields']);
 }
 
-// Anti-abuso: no máximo 5 envios por IP por hora.
-$clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
-if (!bocchi_rate_ok($clientIp, 5, 3600)) {
-    respond(false, $lang, $isAjax, $RETURN_PAGES, 429,
-        $lang === 'en' ? 'Too many messages from your network. Please try again later.'
-                       : 'Muitas mensagens da sua rede. Tente novamente mais tarde.');
+// Anti-abuso em duas camadas:
+//   1. por cliente  — 5 envios/hora (IPv4 por endereço, IPv6 por /64);
+//   2. global       — 60 envios/hora no site inteiro, teto contra spam
+//                     distribuído, que a camada por IP não pega.
+// REMOTE_ADDR de propósito: X-Forwarded-For é controlado pelo cliente e
+// tornaria o limite trivial de burlar.
+$clientIp   = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+$rateTooMuch = $lang === 'en'
+    ? 'Too many messages from your network. Please try again later.'
+    : 'Muitas mensagens da sua rede. Tente novamente mais tarde.';
+
+if (!bocchi_rate_ok(bocchi_rate_key($clientIp), 5, 3600)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
+}
+if (!bocchi_rate_ok('global', 60, 3600)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
 
 $topicLabel = $topic !== '' ? $topic : ($lang === 'en' ? 'Not specified' : 'Não especificado');
