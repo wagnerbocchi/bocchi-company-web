@@ -43,6 +43,12 @@ function finish(?string $token, ?string $error): never
     header('Cache-Control: no-store');
     header('Referrer-Policy: no-referrer');
     header('X-Frame-Options: DENY');
+    // Não declarar "same-origin" aqui: o popup voltou de uma navegação para o
+    // github.com e, com essa política, o navegador o colocaria em outro grupo
+    // de contexto — o window.opener viraria null e o token nunca chegaria ao
+    // painel. O mesmo valor está no admin/.htaccess; aqui é defesa em
+    // profundidade, para o caso de o mod_headers não estar disponível.
+    header('Cross-Origin-Opener-Policy: unsafe-none');
     header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
     $attrs = $token !== null
         ? ' data-token="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '"'

@@ -142,6 +142,7 @@ Para só validar sem escrever: `npm run check:blog`.
 | Token só no navegador | Nunca é gravado no servidor; o que vai para o log é redigido |
 | CSP própria em `/admin/` | O relaxamento necessário ao painel não vale para o site |
 | `noindex` em `/admin/` | O painel não entra em buscador |
+| `same-origin-allow-popups` em `/admin/` | O site roda com `Cross-Origin-Opener-Policy: same-origin`, que corta o `window.opener` do popup ao voltar do GitHub — e sem ele o token nunca chega. Esta é a relaxada mínima que faz o fluxo funcionar, e vale só para `/admin/` |
 
 ### O que está fora do padrão do site, e por quê
 

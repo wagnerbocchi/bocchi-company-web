@@ -131,5 +131,8 @@ Detalhes das decisões de segurança do painel: [`blog.md`](blog.md).
 | Página sem CSS, layout quebrado | `assets/` incompleto — extraia o zip de novo |
 | `/admin/auth.php` mostra código PHP | PHP não está executando em subdiretório: é configuração da hospedagem |
 | `/admin/` diz "painel não configurado" | Falta o `bocchi-oauth.php` na raiz da conta |
+| `/admin/` diz "autenticação cancelada" após o popup | O `admin/.htaccess` não subiu. Sem ele o `/admin/` herda o `Cross-Origin-Opener-Policy: same-origin` do site, que corta o `window.opener` do popup e o token nunca volta |
+| `/admin/` diz "esta conta do GitHub não tem acesso" | Seu usuário não está em `allowed_logins` no `bocchi-oauth.php` |
+| Tela do GitHub diz "redirect_uri mismatch" | O callback do OAuth App não é exatamente `https://bocchi.company/admin/auth.php` |
 | Site parece desatualizado após o upload | Cache do navegador. O `.htaccess` manda `no-cache` no HTML, mas quem tem a versão antiga em cache pode precisar de um reload forçado uma vez |
 | Formulário de contato não envia | `bocchi-smtp.php` fora do lugar ou app password revogada |
