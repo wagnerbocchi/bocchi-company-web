@@ -8,6 +8,8 @@ tags:
   - Engenharia
   - Segurança
   - Meta
+cover_alt: ''
+updated: ''
 ---
 
 Um blog é, historicamente, o pedaço mais atacado de um site institucional. Ele
@@ -117,7 +119,7 @@ código. A diferença é onde ele grava: o painel não escreve num banco, ele
 commita Markdown no repositório. O resultado é idêntico ao de quem editou o
 arquivo à mão.
 
-| | CMS tradicional | Este blog |
+|  | CMS tradicional | Este blog |
 | --- | --- | --- |
 | Conteúdo | Linhas em banco | Arquivos no Git |
 | Publicar | `UPDATE` na tabela | Commit e build |
