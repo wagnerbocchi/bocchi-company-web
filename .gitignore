@@ -17,3 +17,7 @@ smtp-diag*.php
 
 # Dependências do gerador do blog (instaladas no CI)
 /node_modules/
+
+# Saída do empacotador (gerada localmente, não versionada)
+/dist/
+/deploy.zip

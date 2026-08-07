@@ -74,6 +74,24 @@ jobs:
           build sobrescreve."
           git push
 
+      # O deploy é upload manual pelo File Manager da Hostinger. Este zip
+      # contém exatamente o que vai dentro do public_html — sem o Markdown
+      # fonte, sem o gerador, sem node_modules — e já com os dotfiles
+      # (.htaccess), que se perdem quando se arrasta pasta pelo navegador.
+      # Assim não é preciso ter Node instalado para publicar.
+      - name: Empacotar para upload
+        if: github.event_name != 'pull_request'
+        run: npm run package
+
+      - name: Publicar o deploy.zip como artefato
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy
+          path: deploy.zip
+          retention-days: 30
+          if-no-files-found: error
+
     # O job de build precisa de permissão de escrita só quando não é PR.
     permissions:
       contents: write

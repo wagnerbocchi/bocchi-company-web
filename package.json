@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build:blog": "node tools/build-blog.mjs",
-    "check:blog": "node tools/build-blog.mjs --check"
+    "check:blog": "node tools/build-blog.mjs --check",
+    "package": "node tools/package-deploy.mjs"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
