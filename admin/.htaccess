@@ -1,0 +1,45 @@
+# ======================================================================
+# Painel do blog — política própria, mais permissiva que a do site.
+#
+# O site público roda com uma CSP estrita. O painel precisa falar com a API
+# do GitHub e o CMS injeta estilos em runtime, então relaxamos AQUI e só
+# aqui — o alcance fica limitado a /admin/, que não é indexado.
+# ======================================================================
+
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set Cache-Control "no-store"
+
+  # script-src continua 'self', sem 'unsafe-eval' e sem 'unsafe-inline': o
+  # bundle do CMS é servido do próprio domínio e roda assim (verificado).
+  #
+  # jsdelivr e unpkg estão liberados porque o CMS carrega dali a fonte de
+  # ícones (Material Symbols) e um arquivo de versão. É uma concessão
+  # deliberada e limitada: vale só para /admin/, que é usado por uma pessoa,
+  # exige login no GitHub e não é indexado. O site público continua sem
+  # nenhum terceiro — foi por isso que as fontes dele foram self-hosted.
+  # Para eliminar também esta, seria preciso reescrever as URLs dentro do
+  # bundle e versionar ~3 MB de fonte de ícones a cada atualização do CMS.
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://avatars.githubusercontent.com https://raw.githubusercontent.com; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' data: blob: https://api.github.com https://github.com https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net https://www.githubstatus.com; form-action 'self' https://github.com; frame-ancestors 'none'; object-src 'none'"
+</IfModule>
+
+# O popup de OAuth não precisa de quase nada: só do /admin/callback.js.
+# O auth.php também define esta mesma política por conta própria, para o caso
+# de o mod_headers não estar disponível. Duas políticas idênticas se resolvem
+# na interseção, que é ela mesma — nenhuma surpresa.
+<IfModule mod_headers.c>
+  <Files "auth.php">
+    Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  </Files>
+</IfModule>
+
+# O bundle do CMS é versionado; pode ser cacheado agressivamente.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css)$">
+    Header always set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
+
+# Nada de listar o diretório.
+Options -Indexes

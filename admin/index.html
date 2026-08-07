@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Painel — Bocchi Company</title>
+<link rel="icon" type="image/svg+xml" href="/assets/logos/mark-color.svg" />
+<!--
+  O bundle do CMS é servido do próprio domínio, não de CDN: a CSP do site
+  permite apenas script-src 'self'. Ver admin/vendor/LICENSE.txt.
+
+  Este painel não autentica ninguém por conta própria — quem valida a
+  identidade é o GitHub, via OAuth. O admin/auth.php só faz a troca do
+  código pelo token e confere se o usuário está na allowlist. Não há
+  senha, sessão ou banco de dados envolvidos.
+-->
+</head>
+<body>
+<script type="module" src="/admin/vendor/sveltia-cms.js"></script>
+</body>
+</html>

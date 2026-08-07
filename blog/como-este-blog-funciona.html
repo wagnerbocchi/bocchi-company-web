@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0A0E1C" />
+<title>Como este blog funciona — Bocchi Company</title>
+<meta name="description" content="O blog da Bocchi não tem banco de dados, não roda PHP para servir um post e não aceita upload no servidor de produção. Este primeiro texto explica por que, e como escrever nele." />
+<meta name="author" content="Bocchi Company" />
+
+<meta property="og:title" content="Como este blog funciona — Bocchi Company" />
+<meta property="og:description" content="O blog da Bocchi não tem banco de dados, não roda PHP para servir um post e não aceita upload no servidor de produção. Este primeiro texto explica por que, e como escrever nele." />
+<meta property="og:type" content="article" />
+<meta property="og:image" content="https://bocchi.company/assets/img/og-cover.png" />
+<meta property="og:site_name" content="Bocchi Company" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://bocchi.company/assets/img/og-cover.png" />
+<meta property="og:locale" content="pt_BR" />
+<meta property="og:url" content="https://bocchi.company/blog/como-este-blog-funciona" />
+<meta property="article:published_time" content="2026-08-07" />
+<meta property="article:modified_time" content="2026-08-07" />
+
+<link rel="icon" type="image/svg+xml" href="/assets/logos/mark-color.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/logos/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/logos/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/logos/apple-touch-icon.png" />
+
+<link rel="canonical" href="https://bocchi.company/blog/como-este-blog-funciona" />
+<link rel="alternate" type="application/rss+xml" title="Bocchi Company — Blog" href="/feed.xml" />
+<link rel="alternate" hreflang="pt-BR" href="https://bocchi.company/blog/" />
+<link rel="alternate" hreflang="en" href="https://bocchi.company/en/blog/" />
+
+<link rel="preload" href="/assets/fonts/hankengrotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/fonts.css?v=1" />
+<link rel="stylesheet" href="/assets/css/style.css?v=7" />
+<link rel="stylesheet" href="/assets/css/blog.css?v=1" />
+</head>
+<body>
+<a class="skip-link" href="#top">Pular para o conteúdo</a>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Como este blog funciona","datePublished":"2026-08-07","author":{"@type":"Organization","name":"Bocchi Company","url":"https://bocchi.company/"},"publisher":{"@id":"https://bocchi.company/#org"},"mainEntityOfPage":"https://bocchi.company/blog/como-este-blog-funciona","inLanguage":"pt-BR"}</script>
+<header class="nav" id="nav">
+  <div class="container nav__inner">
+    <a href="/" class="nav__brand" aria-label="Bocchi Company — início">
+      <svg class="nav__mark" viewBox="0 0 200 220" aria-hidden="true">
+        <path d="M100 16 L176 44 V118 C176 156 144 184 100 200 C56 184 24 156 24 118 V44 Z" fill="#0B1F5C" stroke="#3D5AFE" stroke-width="3"></path>
+        <g fill="none" stroke="#EDF1F7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M72 60 V148"></path><path d="M72 60 H110 C122 60 130 68 130 80 C130 92 122 100 110 100 H72"></path><path d="M72 100 H114 C128 100 138 110 138 124 C138 138 128 148 114 148 H72"></path></g>
+        <path d="M86 60 V52 C86 46 92 42 100 42 C108 42 114 46 114 52 V60" fill="none" stroke="#EDF1F7" stroke-width="4" stroke-linecap="round"></path>
+        <g fill="#3D5AFE"><circle cx="86" cy="174" r="3.5"></circle><circle cx="100" cy="174" r="3.5"></circle><circle cx="114" cy="174" r="3.5"></circle></g>
+      </svg>
+      <span class="nav__wordmark">
+        <span class="nav__wordmark-bold">Bocchi</span>
+        <span class="nav__wordmark-light">Company</span>
+      </span>
+    </a>
+    <nav class="nav__links" aria-label="Principal">
+      <a href="/servicos">Serviços</a>
+      <a href="/projetos">Projetos</a>
+      <a href="/sobre">Sobre</a>
+      <a href="/blog/">Blog</a>
+    </nav>
+    <div class="nav__lang" aria-label="Idioma">
+      <a href="/sobre">PT</a>
+      <span aria-hidden="true">/</span>
+      <a href="/en/about">EN</a>
+    </div>
+    <a href="/contato" class="btn btn--primary nav__cta" data-magnetic>Falar com a gente</a>
+    <button class="nav__burger" id="navBurger" aria-label="Abrir menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="nav__mobile" id="navMobile">
+    <a href="/servicos">Serviços</a>
+    <a href="/projetos">Projetos</a>
+    <a href="/sobre">Sobre</a>
+    <a href="/blog/">Blog</a>
+    <a href="/contato">Contato</a>
+    <div class="nav__mobile-lang">
+      <a href="/sobre">PT</a>
+      <a href="/en/about">EN</a>
+    </div>
+    <a href="/contato" class="btn btn--primary">Falar com a gente</a>
+  </div>
+</header>
+
+<main id="top">
+
+<article class="post">
+  <header class="post__head">
+    <div class="container post__head-inner">
+      <a class="post__back reveal" href="/blog/">← Todos os artigos</a>
+      <h1 class="post__title reveal" data-reveal-delay="60">Como este blog funciona</h1>
+      <div class="post__meta reveal" data-reveal-delay="120">
+        <time datetime="2026-08-07">Publicado em 07 de agosto de 2026</time>
+        <span aria-hidden="true">·</span>
+        <span>3 min de leitura</span>
+        
+      </div>
+      <ul class="post__tags reveal" data-reveal-delay="160"><li>Engenharia</li><li>Segurança</li><li>Meta</li></ul>
+    </div>
+  </header>
+
+  
+
+  <div class="container post__layout">
+      <nav class="post-toc reveal" aria-label="Neste artigo">
+        <h2 class="post-toc__title">Neste artigo</h2>
+        <ol><li><a href="#o-que-roda-em-producao">O que roda em produção</a></li><li><a href="#onde-o-conteudo-mora">Onde o conteúdo mora</a></li><li><a href="#escrevendo-um-post">Escrevendo um post</a></li><li><a href="#o-painel">O painel</a></li></ol>
+      </nav>
+    <div class="post__body reveal">
+<p>Um blog é, historicamente, o pedaço mais atacado de um site institucional. Ele
+concentra as três coisas que um invasor procura: autenticação, upload de
+arquivo e um banco de dados que renderiza conteúdo. A maioria dos incidentes em
+sites de empresa começa exatamente aí — não na landing page.</p>
+<p>Como a Bocchi vive de encontrar esse tipo de falha em cliente, seria no mínimo
+constrangedor abrir a mesma porta na nossa própria casa. Então o blog foi
+montado de um jeito diferente.</p>
+<h2 id="o-que-roda-em-producao">O que roda em produção</h2>
+<p>Nada. Ou quase.</p>
+<p>Cada post que você lê é um arquivo <code>.html</code> gerado antes do deploy e servido
+como estático. Não há consulta a banco, não há sessão, não há código executando
+para montar esta página. O servidor entrega bytes de disco.</p>
+<p>O que existe de dinâmico no domínio inteiro são dois arquivos PHP: o
+processador do formulário de contato e o intermediário de login do painel — e
+esse segundo só é alcançável em <code>/admin/</code>, que não é indexado.</p>
+<h2 id="onde-o-conteudo-mora">Onde o conteúdo mora</h2>
+<p>Os posts vivem como Markdown no repositório Git, em <code>content/blog/</code>. Publicar é
+um commit. Isso traz três propriedades que um CMS tradicional não dá de graça:</p>
+<ul>
+<li><strong>Histórico real.</strong> Cada alteração de texto tem autor, data e diff.</li>
+<li><strong>Revisão antes do ar.</strong> Um post pode nascer em branch e passar por pull
+request como qualquer mudança de código.</li>
+<li><strong>Backup implícito.</strong> O conteúdo está em toda cópia do repositório.</li>
+</ul>
+<blockquote>
+<p>Se o servidor pegar fogo, o blog inteiro é restaurado com um <code>git clone</code> e um
+build. Não há dump de banco para recuperar.</p>
+</blockquote>
+<h2 id="escrevendo-um-post">Escrevendo um post</h2>
+<p>O frontmatter no topo do arquivo controla os metadados:</p>
+<pre class="code"><code class="hljs language-yaml"><span class="hljs-meta">---</span>
+<span class="hljs-attr">title:</span> <span class="hljs-string">Título</span> <span class="hljs-string">do</span> <span class="hljs-string">artigo</span>
+<span class="hljs-attr">slug:</span> <span class="hljs-string">titulo-do-artigo</span>
+<span class="hljs-attr">date:</span> <span class="hljs-number">2026-08-07</span>
+<span class="hljs-attr">lang:</span> <span class="hljs-string">pt</span>
+<span class="hljs-attr">excerpt:</span> <span class="hljs-string">Uma</span> <span class="hljs-string">ou</span> <span class="hljs-string">duas</span> <span class="hljs-string">frases</span> <span class="hljs-string">que</span> <span class="hljs-string">aparecem</span> <span class="hljs-string">na</span> <span class="hljs-string">listagem</span> <span class="hljs-string">e</span> <span class="hljs-string">nos</span> <span class="hljs-string">previews</span> <span class="hljs-string">de</span> <span class="hljs-string">rede</span> <span class="hljs-string">social.</span>
+<span class="hljs-attr">tags:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-string">Pentest</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-string">Active</span> <span class="hljs-string">Directory</span>
+<span class="hljs-attr">cover:</span> <span class="hljs-string">assets/img/blog/exemplo.webp</span>
+<span class="hljs-attr">draft:</span> <span class="hljs-literal">false</span>
+<span class="hljs-meta">---
+</span></code></pre>
+<p>O build valida isso na hora. Data fora do formato, slug duplicado ou <code>cover</code>
+apontando para um arquivo que não existe fazem a geração falhar com uma
+mensagem dizendo qual arquivo e qual campo — em vez de publicar uma página
+quebrada.</p>
+<h3 id="blocos-de-codigo">Blocos de código</h3>
+<p>Cercas de código com a linguagem declarada saem destacadas. O destaque é
+aplicado <strong>no build</strong>, não no navegador:</p>
+<pre class="code"><code class="hljs language-python"><span class="hljs-keyword">import</span> hashlib
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">rate_key</span>(<span class="hljs-params">ip: <span class="hljs-built_in">str</span></span>) -&gt; <span class="hljs-built_in">str</span>:
+    <span class="hljs-string">&quot;&quot;&quot;IPv6 conta por /64: contar por /128 tornaria o limite inútil.&quot;&quot;&quot;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-string">&quot;:&quot;</span> <span class="hljs-keyword">in</span> ip:
+        blocos = ip.split(<span class="hljs-string">&quot;:&quot;</span>)[:<span class="hljs-number">4</span>]
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;v6:&quot;</span> + <span class="hljs-string">&quot;:&quot;</span>.join(blocos)
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;v4:&quot;</span> + ip
+
+<span class="hljs-built_in">print</span>(hashlib.sha256(rate_key(<span class="hljs-string">&quot;2001:db8:abcd:1234::1&quot;</span>).encode()).hexdigest()[:<span class="hljs-number">16</span>])
+</code></pre>
+<p>Isso importa por dois motivos. O primeiro é performance: nenhum kilobyte de
+highlighter viaja até você. O segundo é a política de segurança de conteúdo do
+site, que permite apenas <code>script-src 'self'</code> — um highlighter de CDN seria
+bloqueado, e afrouxar a regra para acomodá-lo seria trocar segurança por
+conveniência.</p>
+<p>Código curto no meio da frase, como <code>git rebase --onto</code>, também funciona.</p>
+<h3 id="imagens-e-video">Imagens e vídeo</h3>
+<p>Imagens entram com a sintaxe normal do Markdown e ganham <code>loading=&quot;lazy&quot;</code>
+automaticamente. Vídeo curto pode ser servido do próprio domínio:</p>
+<pre class="code"><code class="hljs language-html"><span class="hljs-tag">&lt;<span class="hljs-name">video</span> <span class="hljs-attr">controls</span> <span class="hljs-attr">preload</span>=<span class="hljs-string">&quot;metadata&quot;</span> <span class="hljs-attr">poster</span>=<span class="hljs-string">&quot;/assets/img/blog/poster.webp&quot;</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span> <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;/assets/video/demo.webm&quot;</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;video/webm&quot;</span> /&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">video</span>&gt;</span>
+</code></pre>
+<p>Para vídeo longo, o caminho é embed de plataforma — o que exige liberar
+<code>frame-src</code> na política de segurança, uma decisão consciente e documentada, não
+um efeito colateral.</p>
+<h2 id="o-painel">O painel</h2>
+<p>Nem todo post nasce no editor de código. Em <code>/admin/</code> existe um painel com
+login pelo GitHub, editor visual, upload de imagem e inserção de bloco de
+código. A diferença é onde ele grava: o painel não escreve num banco, ele
+commita Markdown no repositório. O resultado é idêntico ao de quem editou o
+arquivo à mão.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>CMS tradicional</th>
+<th>Este blog</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Conteúdo</td>
+<td>Linhas em banco</td>
+<td>Arquivos no Git</td>
+</tr>
+<tr>
+<td>Publicar</td>
+<td><code>UPDATE</code> na tabela</td>
+<td>Commit e build</td>
+</tr>
+<tr>
+<td>Servir um post</td>
+<td>PHP + consulta SQL</td>
+<td>Arquivo estático</td>
+</tr>
+<tr>
+<td>Superfície de ataque</td>
+<td>Login, upload, SQL</td>
+<td>Estática na leitura</td>
+</tr>
+<tr>
+<td>Recuperação</td>
+<td>Restaurar dump</td>
+<td><code>git clone</code></td>
+</tr>
+</tbody>
+</table>
+<p>Nenhuma dessas escolhas é exótica. Elas só partem de uma pergunta diferente da
+usual: em vez de &quot;como adiciono um blog ao site?&quot;, a pergunta foi &quot;quanto do
+site eu preciso colocar em risco para ter um blog?&quot;.</p>
+<p>A resposta, no fim, foi: quase nada.</p>
+
+    </div>
+  </div>
+
+  
+</article>
+
+</main>
+<footer class="footer">
+  <div class="container footer__inner">
+    <div>
+      <div class="footer__brand">
+        <svg class="footer__mark" viewBox="0 0 200 220" aria-hidden="true">
+          <path d="M100 16 L176 44 V118 C176 156 144 184 100 200 C56 184 24 156 24 118 V44 Z" fill="#0B1F5C" stroke="#3D5AFE" stroke-width="3"></path>
+          <g fill="none" stroke="#EDF1F7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M72 60 V148"></path><path d="M72 60 H110 C122 60 130 68 130 80 C130 92 122 100 110 100 H72"></path><path d="M72 100 H114 C128 100 138 110 138 124 C138 138 128 148 114 148 H72"></path></g>
+          <g fill="#3D5AFE"><circle cx="86" cy="174" r="3.5"></circle><circle cx="100" cy="174" r="3.5"></circle><circle cx="114" cy="174" r="3.5"></circle></g>
+        </svg>
+        <span class="footer__wordmark">Bocchi <span>Company</span></span>
+      </div>
+      <p class="footer__tag">Cibersegurança ofensiva e engenharia de software, sem ruído.</p>
+    </div>
+    <div class="footer__cols">
+      <div class="footer__col">
+        <h4>Navegação</h4>
+        <a href="/servicos">Serviços</a>
+        <a href="/projetos">Projetos</a>
+        <a href="/sobre">Sobre</a>
+        <a href="/blog/">Blog</a>
+        <a href="/contato">Contato</a>
+      </div>
+      <div class="footer__col">
+        <h4>Serviços</h4>
+        <a href="/servicos">Pentest &amp; Red Teaming</a>
+        <a href="/servicos">Campanhas de Phishing</a>
+        <a href="/servicos">Desenvolvimento de Software</a>
+      </div>
+      <div class="footer__col">
+        <h4>Contato</h4>
+        <a href="mailto:contato@bocchi.company">contato@bocchi.company</a>
+        <a href="https://bocchi.company">bocchi.company</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer__base">
+    <div class="container footer__base-inner">
+      <span>© <span id="year">2026</span> Bocchi Company. Todos os direitos reservados.</span>
+      <span class="footer__legal">CNPJ disponível mediante solicitação · Brasil</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/js/main.js?v=7" defer></script>
+</body>
+</html>

@@ -74,4 +74,18 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://bocchi.company/contato"/>
   </url>
 
+  <!-- blog:start -->
+  <url>
+    <loc>https://bocchi.company/blog/</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bocchi.company/blog/como-este-blog-funciona</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <!-- blog:end -->
 </urlset>

@@ -69,9 +69,16 @@ ErrorDocument 404 /404.html
 
 # --- Block direct HTTP access to backend include / secret / diagnostic files ---
 # (PHP `require` still works — this only blocks web requests.)
-<FilesMatch "^(smtp\.php|smtp-diag.*\.php|bocchi-smtp.*\.php)$">
+<FilesMatch "^(smtp\.php|smtp-diag.*\.php|bocchi-smtp.*\.php|bocchi-oauth.*\.php)$">
   Require all denied
 </FilesMatch>
+
+# --- Arquivos do gerador do blog não são conteúdo do site ---
+# O build roda no CI; nada aqui precisa ser alcançável por URL.
+<FilesMatch "^(package(-lock)?\.json|.*\.md)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/(tools|content|node_modules)(/|$)
 
 # --- Never serve dotfiles / VCS metadata ---
 <FilesMatch "^\.">
