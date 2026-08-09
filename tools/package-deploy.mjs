@@ -30,7 +30,7 @@ const NO_ZIP = process.argv.includes('--no-zip');
 const DIRS = ['assets', 'en', 'blog', 'admin'];
 
 /** Arquivos avulsos da raiz. Padrões glob simples só de sufixo/nome exato. */
-const FILES = ['.htaccess', 'robots.txt', 'sitemap.xml', 'feed.xml', 'send.php', 'smtp.php'];
+const FILES = ['.htaccess', 'robots.txt', 'sitemap.xml', 'feed.xml', 'send.php', 'smtp.php', 'token.php', 'antispam.php'];
 const FILE_PATTERNS = [/^[a-z0-9-]+\.html$/i];   // index.html, sobre.html, 404.html…
 
 /**
@@ -99,7 +99,10 @@ for (const dir of DIRS) {
 // O .htaccess é o que faz as URLs limpas, os headers de segurança e o bloqueio
 // dos arquivos de backend funcionarem. Sem ele o site sobe "funcionando" e
 // silenciosamente sem nada disso — o pior tipo de falha.
-for (const obrigatorio of ['.htaccess', 'index.html', 'admin/.htaccess', 'assets/css/style.css']) {
+// send.php agora depende de antispam.php e token.php: um pacote sem eles sobe
+// com o formulário respondendo erro em todo envio.
+for (const obrigatorio of ['.htaccess', 'index.html', 'admin/.htaccess', 'assets/css/style.css',
+                           'send.php', 'antispam.php', 'token.php']) {
   if (!fs.existsSync(path.join(DIST, obrigatorio))) problemas.push(`faltando no pacote: ${obrigatorio}`);
 }
 

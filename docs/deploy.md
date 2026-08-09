@@ -55,10 +55,41 @@ No File Manager, entre em `public_html`, use **Upload** para enviar o
 | `bocchi.company/sobre.html` | 301 para `/sobre` |
 | `bocchi.company/blog/` | listagem do blog |
 | `bocchi.company/smtp.php` | 403 |
+| `bocchi.company/antispam.php` | 403 |
+| `bocchi.company/token.php` | JSON com `"ok":true` |
 | `bocchi.company/naoexiste` | página 404 do site |
 
 Se `/sobre` der 404 mas `/sobre.html` funcionar, o `.htaccess` não subiu ou o
 `mod_rewrite` está desligado.
+
+---
+
+## Anti-spam do formulário de contato
+
+Quatro barreiras, do mais barato para o mais caro (código e motivos em
+`antispam.php`):
+
+| Barreira | O que corta |
+| --- | --- |
+| Honeypot (`website`) | Robô que preenche todo campo que encontra |
+| Mesma origem | POST disparado de fora do site |
+| **Token de envio** | POST direto no `send.php`, sem abrir a página — é assim que chega quase todo spam de formulário |
+| Pontuação do conteúdo | O que sobrou: texto ilegível, link plantado, alfabeto que o site não atende, e-mail sem MX |
+
+Mais o rate limit que já existia: 5 envios/hora por cliente, 60/hora no site.
+
+O token é emitido pelo `token.php`, que o JavaScript da página busca no
+carregamento — por isso `token.php` e `antispam.php` **precisam** subir junto
+com o `send.php`. O empacotador aborta se algum faltar.
+
+**Efeito colateral aceito:** sem JavaScript o formulário deixa de enviar. As
+duas páginas de contato avisam disso em `<noscript>` e oferecem o e-mail direto.
+
+**Calibrar.** Mensagem que passa mas pontua leva no rodapé do e-mail uma linha
+`Anti-spam: score N de 4`. Se aparecer um cliente de verdade com score alto,
+suba o `$SPAM_LIMIT` no `send.php`; se passar spam, desça. O que foi descartado
+vai para o log de erro do PHP (`[contato] descartado (score N: motivos)`), com o
+motivo — dá para conferir sem adivinhar.
 
 ---
 
@@ -136,3 +167,4 @@ Detalhes das decisões de segurança do painel: [`blog.md`](blog.md).
 | Tela do GitHub diz "redirect_uri mismatch" | O callback do OAuth App não é exatamente `https://bocchi.company/admin/auth.php` |
 | Site parece desatualizado após o upload | Cache do navegador. O `.htaccess` manda `no-cache` no HTML, mas quem tem a versão antiga em cache pode precisar de um reload forçado uma vez |
 | Formulário de contato não envia | `bocchi-smtp.php` fora do lugar ou app password revogada |
+| Formulário diz "não foi possível validar o envio" | `token.php` ou `antispam.php` não subiram, ou o JavaScript da página está bloqueado |

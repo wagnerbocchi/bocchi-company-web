@@ -314,7 +314,7 @@ ${modified ? `<meta property="article:modified_time" content="${modified}" />` :
 
 function tail() {
   return `
-<script src="/assets/js/main.js?v=7" defer></script>
+<script src="/assets/js/main.js?v=8" defer></script>
 </body>
 </html>
 `;
