@@ -8,8 +8,11 @@
  * página com #form-ok / #form-err quando enviado sem JavaScript.
  *
  * Barreiras contra spam, na ordem em que rodam (detalhes em antispam.php):
- *   honeypot → mesma origem → token de envio → validação dos campos →
- *   rate limit → pontuação do conteúdo.
+ *   honeypot → mesma origem → assinatura do token → validação dos campos →
+ *   limite por cliente → gasto do nonce → pontuação do conteúdo → teto global.
+ * A ordem não é estética: tudo que grava em disco ou custa rede fica DEPOIS do
+ * limite por cliente, e o teto global fica depois do filtro de conteúdo para
+ * que spam descartado não consuma a cota de quem tem algo a dizer.
  * O envio sem JavaScript deixa de funcionar por causa do token: a página de
  * contato avisa disso em <noscript> e oferece o e-mail direto.
  *
@@ -119,7 +122,13 @@ if (!bocchi_same_site()) {
 // carregamento. Assinado, com validade e de uso único — um POST direto no
 // endpoint (como chega quase todo spam de formulário) não tem como ter um.
 // Vencido: o JS pede outro e repete o envio uma vez (daí o $retry).
-if (!bocchi_token_check(isset($_POST['t']) ? $_POST['t'] : '', $TOKEN_MAX)) {
+//
+// Aqui só a assinatura e a validade, que são cálculo puro. Gastar o nonce
+// grava um arquivo, e isso fica DEPOIS do rate limit — senão qualquer anônimo
+// enche o disco de nonces a dois requests por arquivo, sem nunca passar da
+// validação dos campos.
+$nonce = bocchi_token_verify(isset($_POST['t']) ? $_POST['t'] : '', $TOKEN_MAX);
+if ($nonce === false) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token'], true);
 }
 
@@ -137,6 +146,13 @@ $message = trim((string) (isset($_POST['message']) ? $_POST['message'] : ''));
 $valid = true;
 if (mb_strlen($name) < 2 || mb_strlen($name) > 100) $valid = false;
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 150) $valid = false;
+// O filter_var aceita formas exóticas mas válidas pela RFC, como
+// "a<b>"@dominio.tld — local-part entre aspas. Esse endereço vira
+// Reply-To: <"a<b>"@dominio.tld>, e o ">" de dentro fecha o angle-addr antes
+// da hora, dando ao remetente controle sobre o resto do cabeçalho. Nenhum
+// cliente real tem esses caracteres no e-mail; recusar a classe inteira sai
+// mais barato que tentar escapá-la.
+if (preg_match('/["<>,;:\\\\\s]/', $email)) $valid = false;
 if (mb_strlen($company) > 150) $valid = false;
 if (mb_strlen($topic) > 80) $valid = false;
 if (mb_strlen($message) < $MIN_MESSAGE || mb_strlen($message) > 4000) $valid = false;
@@ -144,12 +160,11 @@ if (!$valid) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 422, $t['fields']);
 }
 
-// Anti-abuso em duas camadas:
-//   1. por cliente  — 5 envios/hora (IPv4 por endereço, IPv6 por /64);
-//   2. global       — 60 envios/hora no site inteiro, teto contra spam
-//                     distribuído, que a camada por IP não pega.
+// Limite por cliente: 5 envios/hora (IPv4 por endereço, IPv6 por /64).
 // REMOTE_ADDR de propósito: X-Forwarded-For é controlado pelo cliente e
-// tornaria o limite trivial de burlar.
+// tornaria o limite trivial de burlar. (A hospedagem restaura o IP real do
+// visitante aqui — se um dia isso mudar, este limite passa a contar o edge da
+// CDN e vira um balde só para todo mundo. Confira o "IP:" do rodapé do e-mail.)
 $clientIp   = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
 $rateTooMuch = $lang === 'en'
     ? 'Too many messages from your network. Please try again later.'
@@ -158,25 +173,40 @@ $rateTooMuch = $lang === 'en'
 if (!bocchi_rate_ok(bocchi_rate_key($clientIp), 5, 3600)) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
-if (!bocchi_rate_ok('global', 60, 3600)) {
-    respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
+
+// Só agora o nonce é gasto: a partir daqui cada tentativa custa uma das 5
+// vagas horárias do cliente, então a gravação em disco tem teto.
+if (!bocchi_nonce_claim($nonce, $TOKEN_MAX)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token'], true);
 }
 
 // Última camada: o conteúdo. Pega o que passou pelas outras — robô que roda
 // JavaScript de verdade, ou envio manual. Responde SUCESSO e joga fora, igual
 // ao honeypot: dizer "recusado" ensina o spammer a ajustar o texto e tentar de
 // novo. Fica no log de erro do servidor, com o motivo, para conferência.
+//
+// Exige um sinal FORTE além do score: descartar em silêncio a mensagem de um
+// cliente é o pior erro que esta camada pode cometer, e sem essa condição
+// bastava a soma de três coincidências fracas para isso acontecer.
 $spam = bocchi_spam_score(array(
     'name' => $name, 'email' => $email, 'company' => $company,
     'topic' => $topic, 'message' => $message, 'topics' => $TOPICS,
 ));
-if ($spam['score'] >= $SPAM_LIMIT) {
+if ($spam['score'] >= $SPAM_LIMIT && $spam['strong']) {
     error_log(sprintf(
         '[contato] descartado (score %d: %s) ip=%s email=%s msg=%s',
         $spam['score'], implode('; ', $spam['why']), $clientIp, $email,
         mb_substr($message, 0, 160)
     ));
     respond(true, $lang, $isAjax, $RETURN_PAGES, 200, '');
+}
+
+// Teto global do site: 60/hora. Fica DEPOIS do filtro de conteúdo de
+// propósito — spam descartado não deve consumir a cota, senão um robô manda
+// 60 mensagens ilegíveis por hora e derruba o formulário para todo mundo,
+// que é justamente o estrago que este limite deveria evitar.
+if (!bocchi_rate_ok('global', 60, 3600)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
 
 $topicLabel = $topic !== '' ? $topic : ($lang === 'en' ? 'Not specified' : 'Não especificado');
@@ -199,6 +229,7 @@ $bodyLines = array(
 // permite calibrar o $SPAM_LIMIT com casos reais em vez de no chute.
 if ($spam['score'] > 0) {
     $bodyLines[] = 'Anti-spam: score ' . $spam['score'] . ' de ' . $SPAM_LIMIT
+        . ($spam['strong'] ? ' + sinal forte' : ', só sinais fracos')
         . ' (' . implode('; ', $spam['why']) . ')';
 }
 $body = implode("\n", $bodyLines);

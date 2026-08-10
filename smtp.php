@@ -45,7 +45,12 @@ if (!function_exists('bocchi_load_smtp_config')) {
             return '=?UTF-8?B?' . base64_encode($s) . '?=';
         }
         if (preg_match('/[",:;<>@()\[\]\\\\]/', $s)) {
-            return '"' . str_replace('"', '\\"', $s) . '"';
+            // A barra invertida precisa ser escapada ANTES da aspa, e é por isso
+            // que as duas saem no mesmo str_replace: escapar só a aspa deixa um
+            // nome terminado em "\" fechar a string com \" — a quoted-string
+            // fica aberta e o resto do cabeçalho passa a ser interpretado como
+            // endereço. É a injeção de Reply-To por dentro do display-name.
+            return '"' . str_replace(array('\\', '"'), array('\\\\', '\\"'), $s) . '"';
         }
         return $s;
     }

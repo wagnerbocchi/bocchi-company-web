@@ -19,11 +19,24 @@ if (!function_exists('bocchi_rate_dir')) {
 
     // ===================== ESTADO EM DISCO =====================
 
-    /** Diretório de estado do rate limit (criado com permissão restrita). */
+    /**
+     * Diretório de estado (contadores e nonces), criado com permissão restrita.
+     *
+     * Preferência por UM NÍVEL ACIMA do public_html — o mesmo lugar do
+     * bocchi-smtp.php: fora do alcance de qualquer URL e privado da conta.
+     * O sys_get_temp_dir() é o fallback, não a primeira escolha: em hospedagem
+     * compartilhada o /tmp pode ser comum a vários clientes do mesmo servidor,
+     * e quem lê o .salt de lá forja token à vontade e derruba a camada inteira.
+     */
     function bocchi_rate_dir() {
-        $dir = sys_get_temp_dir() . '/bocchi_rl';
-        if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-        return $dir;
+        static $dir = null;
+        if ($dir !== null) { return $dir; }
+
+        foreach (array(dirname(__DIR__) . '/.bocchi-state', sys_get_temp_dir() . '/bocchi_rl') as $cand) {
+            if (!is_dir($cand)) { @mkdir($cand, 0700, true); }
+            if (is_dir($cand) && is_writable($cand)) { return $dir = $cand; }
+        }
+        return $dir = sys_get_temp_dir() . '/bocchi_rl';
     }
 
     /**
@@ -169,11 +182,14 @@ if (!function_exists('bocchi_rate_dir')) {
     }
 
     /**
-     * Confere assinatura, idade e ineditismo do token.
-     * A ordem importa: só gasta o nonce depois que a assinatura confere, senão
-     * qualquer um invalidaria tokens alheios chutando nonces.
+     * Confere assinatura e validade do token. Retorna o nonce, ou false.
+     *
+     * NÃO gasta o nonce — quem gasta é bocchi_nonce_claim(), e de propósito só
+     * depois do rate limit. Conferir é puro cálculo; gastar escreve um arquivo,
+     * e escrita comandada por anônimo precisa estar atrás de um limite, senão
+     * vira enchimento de disco/inode a dois requests por arquivo.
      */
-    function bocchi_token_check($token, $maxAge) {
+    function bocchi_token_verify($token, $maxAge) {
         $parts = explode('.', (string) $token);
         if (count($parts) !== 4 || $parts[0] !== 'v1') { return false; }
         list($_v, $ts, $nonce, $sig) = $parts;
@@ -188,7 +204,7 @@ if (!function_exists('bocchi_rate_dir')) {
         $age = time() - (int) $ts;
         if ($age < -5 || $age > $maxAge) { return false; }
 
-        return bocchi_nonce_claim($nonce, $maxAge);
+        return $nonce;
     }
 
     /**
@@ -294,8 +310,15 @@ if (!function_exists('bocchi_rate_dir')) {
      * russo, citar o domínio do site), então nenhum sozinho chega ao limite.
      * É a soma que condena.
      *
+     * Sinais são FORTES ou FRACOS. Forte é o que sozinho já denuncia um robô
+     * (texto ilegível, markup de link, alfabeto que o site não atende). Fraco é
+     * o que um cliente de verdade pode acionar sem querer — citar o domínio do
+     * site, colar um link, ter e-mail em domínio sem MX. Sem essa separação,
+     * três coincidências fracas somavam 4 e descartavam em silêncio a mensagem
+     * de um cliente: o pior resultado possível desta camada.
+     *
      * $fields: name, email, company, topic, message, topics (opções válidas).
-     * Retorna array('score' => int, 'why' => array de motivos).
+     * Retorna array('score' => int, 'why' => array, 'strong' => bool).
      */
     function bocchi_spam_score($fields) {
         $name    = isset($fields['name']) ? $fields['name'] : '';
@@ -305,24 +328,28 @@ if (!function_exists('bocchi_rate_dir')) {
         $message = isset($fields['message']) ? $fields['message'] : '';
         $topics  = isset($fields['topics']) && is_array($fields['topics']) ? $fields['topics'] : array();
 
-        $score = 0;
-        $why   = array();
-        $add = function ($points, $reason) use (&$score, &$why) {
+        $score  = 0;
+        $why    = array();
+        $strong = false;
+        $add = function ($points, $reason, $isStrong = false) use (&$score, &$why, &$strong) {
             $score += $points;
-            $why[] = $reason;
+            $why[]  = $reason . ($isStrong ? '' : ' [fraco]');
+            if ($isStrong) { $strong = true; }
         };
 
         // --- Links. O alvo do spam de formulário quase sempre é plantar um. ---
         if (preg_match('~\[\s*(?:url|link)\b|<\s*a\s[^>]*href~i', $message)) {
-            $add(5, 'markup de link na mensagem');
+            $add(5, 'markup de link na mensagem', true);
         } else {
             $urls = preg_match_all('~(?:https?://|\bwww\.)~i', $message);
-            if ($urls >= 2)      { $add(4, $urls . ' urls na mensagem'); }
+            // Um link só é coisa de cliente ("olha nosso produto: https://..."):
+            // pontua, mas não condena sozinho. Dois ou mais já é plantio.
+            if ($urls >= 2)      { $add(4, $urls . ' urls na mensagem', true); }
             elseif ($urls === 1) { $add(2, 'url na mensagem'); }
         }
         // Ninguém digita link no campo de nome ou de empresa.
         if (preg_match('~https?://|\bwww\.~i', $name . ' ' . $company)) {
-            $add(4, 'url no nome/empresa');
+            $add(4, 'url no nome/empresa', true);
         }
 
         // --- Texto sem forma de palavra (o caso "Egjnjmfnefjwdifj fkmdkdw..."). ---
@@ -334,11 +361,11 @@ if (!function_exists('bocchi_rate_dir')) {
             if (bocchi_gibberish($w)) { $gib++; }
         }
         if ($total >= 2 && $gib >= 2 && $gib / $total >= 0.5) {
-            $add(4, "mensagem ilegível ({$gib}/{$total} palavras)");
+            $add(4, "mensagem ilegível ({$gib}/{$total} palavras)", true);
         } elseif ($gib >= 3) {
-            $add(3, "{$gib} palavras ilegíveis");
+            $add(3, "{$gib} palavras ilegíveis", true);
         } elseif ($total > 0 && $total <= 2 && $gib === $total) {
-            $add(3, 'mensagem curta e ilegível');
+            $add(3, 'mensagem curta e ilegível', true);
         }
         if (bocchi_gibberish($name)) { $add(2, 'nome sem forma de nome'); }
 
@@ -349,7 +376,7 @@ if (!function_exists('bocchi_rate_dir')) {
         //     caractere: citar uma palavra em japonês não condena a mensagem. ---
         $latin = (int) preg_match_all('/\p{Latin}/u', $message);
         $other = (int) preg_match_all('/\p{L}/u', $message) - $latin;
-        if ($other > $latin) { $add(4, 'mensagem fora do alfabeto latino'); }
+        if ($other > $latin) { $add(4, 'mensagem fora do alfabeto latino', true); }
 
         // --- Frases de spam clássico. Só expressões inteiras: palavra solta
         //     como "crypto" ou "phishing" é vocabulário normal aqui. ---
@@ -364,7 +391,7 @@ if (!function_exists('bocchi_rate_dir')) {
             if (stripos($message, $p) !== false) { $hits[] = $p; }
         }
         if ($hits) {
-            $add(min(4, 2 * count($hits)), 'frase de spam: ' . implode(', ', array_slice($hits, 0, 3)));
+            $add(min(4, 2 * count($hits)), 'frase de spam: ' . implode(', ', array_slice($hits, 0, 3)), true);
         }
 
         // --- O robô ecoa o domínio alvo de volta na mensagem. Sozinho não
@@ -380,14 +407,15 @@ if (!function_exists('bocchi_rate_dir')) {
 
         // --- Bloco único sem espaço nenhum: colagem automática, não texto. ---
         if (mb_strlen($message, 'UTF-8') > 40 && !preg_match('/\s/u', $message)) {
-            $add(3, 'mensagem sem espaços');
+            $add(3, 'mensagem sem espaços', true);
         }
 
-        // --- Endereço para o qual seria impossível responder. ---
+        // --- Endereço para o qual seria impossível responder. Fraco: existe
+        //     domínio legítimo servindo e-mail sem MX publicado. ---
         if (!bocchi_email_domain_resolves($email)) {
             $add(3, 'domínio do e-mail sem MX/A');
         }
 
-        return array('score' => $score, 'why' => $why);
+        return array('score' => $score, 'why' => $why, 'strong' => $strong);
     }
 }
