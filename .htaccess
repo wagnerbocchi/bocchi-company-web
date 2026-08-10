@@ -73,6 +73,15 @@ ErrorDocument 404 /404.html
   Require all denied
 </FilesMatch>
 
+# --- Log de erro nunca é conteúdo do site ---
+# O send.php registra ali o motivo de cada descarte do anti-spam, com e-mail,
+# IP e um trecho da mensagem de quem escreveu. Hoje /error_log responde 404,
+# mas basta a hospedagem passar a escrever o log dentro do public_html — que é
+# o padrão de vários painéis — para esse arquivo virar uma URL pública.
+<FilesMatch "^(error_log|php_errorlog|.*\.log)$">
+  Require all denied
+</FilesMatch>
+
 # --- Arquivos do gerador do blog não são conteúdo do site ---
 # O build roda no CI; nada aqui precisa ser alcançável por URL.
 <FilesMatch "^(package(-lock)?\.json|.*\.md)$">
