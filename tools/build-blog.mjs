@@ -226,6 +226,16 @@ function readPosts() {
     const date = String(d.date instanceof Date ? d.date.toISOString().slice(0, 10) : d.date).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { fail(`${where}: "date" deve ser AAAA-MM-DD, veio "${d.date}"`); continue; }
 
+    // "updated" sai cru em <meta content=...> e no <lastmod> do sitemap, então
+    // é validado com o mesmo rigor de "date". Sem isso, dez caracteres de
+    // frontmatter fecham a tag e injetam markup na página gerada.
+    const updated = d.updated
+      ? String(d.updated instanceof Date ? d.updated.toISOString().slice(0, 10) : d.updated).slice(0, 10)
+      : '';
+    if (updated && !/^\d{4}-\d{2}-\d{2}$/.test(updated)) {
+      fail(`${where}: "updated" deve ser AAAA-MM-DD, veio "${d.updated}"`); continue;
+    }
+
     const lang = d.lang === 'en' ? 'en' : 'pt';
     const slug = slugify(d.slug || name.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.md$/, ''));
     if (!slug) { fail(`${where}: não consegui derivar um slug`); continue; }
@@ -246,7 +256,7 @@ function readPosts() {
       cover: d.cover ? '/' + String(d.cover).replace(/^\//, '') : '',
       coverAlt: d.cover_alt ? String(d.cover_alt) : '',
       tags: Array.isArray(d.tags) ? d.tags.map(String) : [],
-      updated: d.updated ? String(d.updated).slice(0, 10) : '',
+      updated,
       draft: d.draft === true,
       translationOf: d.translation_of ? slugify(String(d.translation_of)) : '',
       body: fm.content,
@@ -288,8 +298,8 @@ function head({ lang, title, description, url, image, type = 'article', publishe
 <meta name="twitter:image" content="${esc(image)}" />
 <meta property="og:locale" content="${cfg.ogLocale}" />
 <meta property="og:url" content="${esc(url)}" />
-${published ? `<meta property="article:published_time" content="${published}" />` : ''}
-${modified ? `<meta property="article:modified_time" content="${modified}" />` : ''}
+${published ? `<meta property="article:published_time" content="${esc(published)}" />` : ''}
+${modified ? `<meta property="article:modified_time" content="${esc(modified)}" />` : ''}
 
 <link rel="icon" type="image/svg+xml" href="/assets/logos/mark-color.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/logos/favicon-32.png" />
@@ -314,7 +324,7 @@ ${modified ? `<meta property="article:modified_time" content="${modified}" />` :
 
 function tail() {
   return `
-<script src="/assets/js/main.js?v=7" defer></script>
+<script src="/assets/js/main.js?v=8" defer></script>
 </body>
 </html>
 `;

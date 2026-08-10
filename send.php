@@ -7,6 +7,15 @@
  * Responde JSON quando chamado via fetch/AJAX; redireciona de volta para a
  * página com #form-ok / #form-err quando enviado sem JavaScript.
  *
+ * Barreiras contra spam, na ordem em que rodam (detalhes em antispam.php):
+ *   honeypot → mesma origem → assinatura do token → validação dos campos →
+ *   limite por cliente → gasto do nonce → pontuação do conteúdo → teto global.
+ * A ordem não é estética: tudo que grava em disco ou custa rede fica DEPOIS do
+ * limite por cliente, e o teto global fica depois do filtro de conteúdo para
+ * que spam descartado não consuma a cota de quem tem algo a dizer.
+ * O envio sem JavaScript deixa de funcionar por causa do token: a página de
+ * contato avisa disso em <noscript> e oferece o e-mail direto.
+ *
  * Requisitos: PHP 7.4+ com mbstring (padrão na Hostinger).
  */
 
@@ -20,6 +29,16 @@ $TO_EMAIL    = 'contato@bocchi.company';   // para onde as mensagens vão
 $FROM_EMAIL  = 'contato@bocchi.company';   // remetente do fallback mail() (use um endereço @bocchi.company)
 $FROM_NAME   = 'Site Bocchi Company';
 $MIN_MESSAGE = 10;                         // tamanho mínimo da mensagem
+$TOKEN_MAX   = 43200;                      // validade do token de envio (12 h)
+$SPAM_LIMIT  = 4;                          // score a partir do qual a mensagem é descartada
+// Opções do <select name="topic"> nas duas línguas. Um valor fora desta lista
+// não veio do formulário — mantenha em sincronia com contato.html / en/contact.html.
+$TOPICS = array(
+    'Pentest & Red Teaming',
+    'Campanhas de Phishing', 'Phishing Campaigns',
+    'Desenvolvimento de Software', 'Software Development',
+    'Outro', 'Other',
+);
 // Entrega caindo em spam? Veja "USAR SMTP" no rodapé deste arquivo.
 // ===============================================================
 
@@ -30,11 +49,15 @@ $isAjax = (
     || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
 );
 
-function respond($ok, $lang, $isAjax, $pages, $httpCode, $msg) {
+// $retry: sinaliza ao JS que vale pedir um token novo e tentar de novo uma vez
+// (acontece com a página aberta há muito tempo, com o token já vencido).
+function respond($ok, $lang, $isAjax, $pages, $httpCode, $msg, $retry = false) {
     if ($isAjax) {
         http_response_code($ok ? 200 : $httpCode);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(array('ok' => $ok, 'error' => $ok ? null : $msg), JSON_UNESCAPED_UNICODE);
+        $out = array('ok' => $ok, 'error' => $ok ? null : $msg);
+        if ($retry) { $out['retry'] = true; }
+        echo json_encode($out, JSON_UNESCAPED_UNICODE);
     } else {
         $page = isset($pages[$lang]) ? $pages[$lang] : $pages['pt'];
         header('Location: /' . $page . ($ok ? '#form-ok' : '#form-err'), true, 303);
@@ -44,134 +67,74 @@ function respond($ok, $lang, $isAjax, $pages, $httpCode, $msg) {
 
 $lang = (isset($_POST['lang']) && $_POST['lang'] === 'en') ? 'en' : 'pt';
 $t = $lang === 'en'
-    ? array('method' => 'Method not allowed.', 'fields' => 'Please check the highlighted fields.', 'fail' => 'We could not send your message. Please email us directly.')
-    : array('method' => 'Método não permitido.', 'fields' => 'Revise os campos destacados.', 'fail' => 'Não conseguimos enviar. Tente o e-mail direto.');
+    ? array(
+        'method' => 'Method not allowed.',
+        'fields' => 'Please check the highlighted fields.',
+        'fail'   => 'We could not send your message. Please email us directly.',
+        'token'  => 'We could not validate this submission. Reload the page and try again — the form needs JavaScript — or email contato@bocchi.company directly.',
+      )
+    : array(
+        'method' => 'Método não permitido.',
+        'fields' => 'Revise os campos destacados.',
+        'fail'   => 'Não conseguimos enviar. Tente o e-mail direto.',
+        'token'  => 'Não foi possível validar o envio. Recarregue a página e tente de novo — o formulário precisa de JavaScript — ou escreva direto para contato@bocchi.company.',
+      );
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 405, $t['method']);
 }
+
+define('BOCCHI_SEND', true);
+require_once __DIR__ . '/antispam.php';
 
 // Honeypot anti-spam: o campo "website" precisa ficar vazio.
 if (!empty($_POST['website'])) {
     respond(true, $lang, $isAjax, $RETURN_PAGES, 200, ''); // finge sucesso e descarta
 }
 
+/**
+ * O POST veio de uma página deste site?
+ * O navegador manda Origin no fetch e Referer no envio sem JavaScript. Compara
+ * com o Host da própria requisição — os dois vêm do navegador, então em um
+ * envio legítimo eles sempre batem. Sem nenhum dos dois cabeçalhos não dá para
+ * julgar, e aí passa: quem decide o caso é o token logo abaixo.
+ */
+function bocchi_same_site() {
+    $source = '';
+    if (!empty($_SERVER['HTTP_ORIGIN']))       { $source = $_SERVER['HTTP_ORIGIN']; }
+    elseif (!empty($_SERVER['HTTP_REFERER']))  { $source = $_SERVER['HTTP_REFERER']; }
+    if ($source === '' || empty($_SERVER['HTTP_HOST'])) { return true; }
+
+    $strip = function ($host) {
+        $host = strtolower(preg_replace('/:\d+$/', '', (string) $host));
+        return preg_replace('/^www\./', '', $host);   // www.bocchi.company e bocchi.company são o mesmo site
+    };
+    $from = parse_url($source, PHP_URL_HOST);
+    if (!is_string($from) || $from === '') { return false; }
+    return $strip($from) === $strip($_SERVER['HTTP_HOST']);
+}
+
+if (!bocchi_same_site()) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token']);
+}
+
+// Token de envio: emitido pelo token.php, que o JS da página busca no
+// carregamento. Assinado, com validade e de uso único — um POST direto no
+// endpoint (como chega quase todo spam de formulário) não tem como ter um.
+// Vencido: o JS pede outro e repete o envio uma vez (daí o $retry).
+//
+// Aqui só a assinatura e a validade, que são cálculo puro. Gastar o nonce
+// grava um arquivo, e isso fica DEPOIS do rate limit — senão qualquer anônimo
+// enche o disco de nonces a dois requests por arquivo, sem nunca passar da
+// validação dos campos.
+$nonce = bocchi_token_verify(isset($_POST['t']) ? $_POST['t'] : '', $TOKEN_MAX);
+if ($nonce === false) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token'], true);
+}
+
 // Remove quebras de linha — proteção contra header injection.
 function oneline($v) {
     return trim(str_replace(array("\r", "\n", "\0"), ' ', (string) $v));
-}
-
-// Diretório de estado do rate limit (criado com permissão restrita).
-function bocchi_rate_dir() {
-    $dir = sys_get_temp_dir() . '/bocchi_rl';
-    if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-    return $dir;
-}
-
-/**
- * Salt persistente para o nome dos arquivos de contador.
- * Sem ele o nome seria sha256(IP) puro — como o espaço IPv4 é enumerável,
- * qualquer um que consiga listar o diretório confirmaria quais IPs
- * contataram o site. O salt é gerado uma vez e fica só no disco (nunca no
- * repositório). Se não der para persistir, cai para um valor por processo:
- * o limite continua funcionando, só não sobrevive entre requisições.
- */
-function bocchi_rate_salt() {
-    static $salt = null;
-    if ($salt !== null) { return $salt; }
-
-    // Fallback determinístico, usado só se o filesystem não colaborar. Não é
-    // secreto, mas nesse cenário os contadores também não persistem — o que
-    // importa é que todos os processos cheguem ao MESMO valor, senão cada um
-    // contaria em um arquivo diferente e o limite deixaria de valer.
-    $fallback = hash('sha256', 'bocchi-rl|' . __FILE__);
-    $path = bocchi_rate_dir() . '/.salt';
-
-    // "c+" cria sem truncar; o flock serializa a criação. Sem isso, requisições
-    // simultâneas em um diretório novo geram salts diferentes entre si.
-    $fh = @fopen($path, 'c+');
-    if (!$fh) { return $salt = $fallback; }
-    if (!@flock($fh, LOCK_EX)) { fclose($fh); return $salt = $fallback; }
-
-    $existing = stream_get_contents($fh);
-    if (is_string($existing) && strlen($existing) >= 32) {
-        flock($fh, LOCK_UN);
-        fclose($fh);
-        return $salt = $existing;
-    }
-
-    try {
-        $salt = bin2hex(random_bytes(32));
-    } catch (Exception $e) {
-        $salt = $fallback;
-    }
-    ftruncate($fh, 0);
-    rewind($fh);
-    fwrite($fh, $salt);
-    fflush($fh);
-    flock($fh, LOCK_UN);
-    fclose($fh);
-    @chmod($path, 0600);
-    return $salt;
-}
-
-/**
- * Chave de agrupamento do rate limit.
- * IPv4 conta por endereço. IPv6 conta por /64: um único cliente costuma ter
- * um /64 inteiro (2^64 endereços), então contar por /128 tornaria o limite
- * inútil — bastaria trocar de endereço a cada envio.
- */
-function bocchi_rate_key($ip) {
-    $bin = @inet_pton((string) $ip);
-    if ($bin === false) { return 'raw:' . $ip; }
-    if (strlen($bin) === 16) {
-        // IPv4 mapeado em IPv6 (::ffff:a.b.c.d) conta como IPv4.
-        if (substr($bin, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
-            return 'v4:' . inet_ntop(substr($bin, 12));
-        }
-        return 'v6:' . bin2hex(substr($bin, 0, 8)); // prefixo /64
-    }
-    return 'v4:' . $ip;
-}
-
-/**
- * Limite de N eventos por janela de tempo para uma chave.
- * Leitura e escrita acontecem sob o MESMO flock — sem isso, requisições
- * simultâneas leem o mesmo estado e todas passam.
- *
- * Falha aberta (retorna true) se o filesystem não colaborar: um formulário
- * de contato quebrado custa mais que um limite não aplicado.
- */
-function bocchi_rate_ok($key, $max, $window) {
-    $file = bocchi_rate_dir() . '/' . hash_hmac('sha256', $key, bocchi_rate_salt());
-    $fh = @fopen($file, 'c+');
-    if (!$fh) { return true; }
-    if (!@flock($fh, LOCK_EX)) { fclose($fh); return true; }
-
-    $now  = time();
-    $hits = array();
-    $raw  = stream_get_contents($fh);
-    $data = json_decode((string) $raw, true);
-    if (is_array($data)) {
-        foreach ($data as $t) {
-            if (is_int($t) && $t > $now - $window) { $hits[] = $t; }
-        }
-    }
-
-    $ok = count($hits) < $max;
-    if ($ok) {
-        $hits[] = $now;
-        if (count($hits) > $max) { $hits = array_slice($hits, -$max); }
-        ftruncate($fh, 0);
-        rewind($fh);
-        fwrite($fh, json_encode($hits));
-        fflush($fh);
-    }
-
-    flock($fh, LOCK_UN);
-    fclose($fh);
-    @chmod($file, 0600);
-    return $ok;
 }
 
 $name    = oneline(isset($_POST['name']) ? $_POST['name'] : '');
@@ -183,6 +146,13 @@ $message = trim((string) (isset($_POST['message']) ? $_POST['message'] : ''));
 $valid = true;
 if (mb_strlen($name) < 2 || mb_strlen($name) > 100) $valid = false;
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 150) $valid = false;
+// O filter_var aceita formas exóticas mas válidas pela RFC, como
+// "a<b>"@dominio.tld — local-part entre aspas. Esse endereço vira
+// Reply-To: <"a<b>"@dominio.tld>, e o ">" de dentro fecha o angle-addr antes
+// da hora, dando ao remetente controle sobre o resto do cabeçalho. Nenhum
+// cliente real tem esses caracteres no e-mail; recusar a classe inteira sai
+// mais barato que tentar escapá-la.
+if (preg_match('/["<>,;:\\\\\s]/', $email)) $valid = false;
 if (mb_strlen($company) > 150) $valid = false;
 if (mb_strlen($topic) > 80) $valid = false;
 if (mb_strlen($message) < $MIN_MESSAGE || mb_strlen($message) > 4000) $valid = false;
@@ -190,12 +160,11 @@ if (!$valid) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 422, $t['fields']);
 }
 
-// Anti-abuso em duas camadas:
-//   1. por cliente  — 5 envios/hora (IPv4 por endereço, IPv6 por /64);
-//   2. global       — 60 envios/hora no site inteiro, teto contra spam
-//                     distribuído, que a camada por IP não pega.
+// Limite por cliente: 5 envios/hora (IPv4 por endereço, IPv6 por /64).
 // REMOTE_ADDR de propósito: X-Forwarded-For é controlado pelo cliente e
-// tornaria o limite trivial de burlar.
+// tornaria o limite trivial de burlar. (A hospedagem restaura o IP real do
+// visitante aqui — se um dia isso mudar, este limite passa a contar o edge da
+// CDN e vira um balde só para todo mundo. Confira o "IP:" do rodapé do e-mail.)
 $clientIp   = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
 $rateTooMuch = $lang === 'en'
     ? 'Too many messages from your network. Please try again later.'
@@ -204,6 +173,38 @@ $rateTooMuch = $lang === 'en'
 if (!bocchi_rate_ok(bocchi_rate_key($clientIp), 5, 3600)) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
+
+// Só agora o nonce é gasto: a partir daqui cada tentativa custa uma das 5
+// vagas horárias do cliente, então a gravação em disco tem teto.
+if (!bocchi_nonce_claim($nonce, $TOKEN_MAX)) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token'], true);
+}
+
+// Última camada: o conteúdo. Pega o que passou pelas outras — robô que roda
+// JavaScript de verdade, ou envio manual. Responde SUCESSO e joga fora, igual
+// ao honeypot: dizer "recusado" ensina o spammer a ajustar o texto e tentar de
+// novo. Fica no log de erro do servidor, com o motivo, para conferência.
+//
+// Exige um sinal FORTE além do score: descartar em silêncio a mensagem de um
+// cliente é o pior erro que esta camada pode cometer, e sem essa condição
+// bastava a soma de três coincidências fracas para isso acontecer.
+$spam = bocchi_spam_score(array(
+    'name' => $name, 'email' => $email, 'company' => $company,
+    'topic' => $topic, 'message' => $message, 'topics' => $TOPICS,
+));
+if ($spam['score'] >= $SPAM_LIMIT && $spam['strong']) {
+    error_log(sprintf(
+        '[contato] descartado (score %d: %s) ip=%s email=%s msg=%s',
+        $spam['score'], implode('; ', $spam['why']), $clientIp, $email,
+        mb_substr($message, 0, 160)
+    ));
+    respond(true, $lang, $isAjax, $RETURN_PAGES, 200, '');
+}
+
+// Teto global do site: 60/hora. Fica DEPOIS do filtro de conteúdo de
+// propósito — spam descartado não deve consumir a cota, senão um robô manda
+// 60 mensagens ilegíveis por hora e derruba o formulário para todo mundo,
+// que é justamente o estrago que este limite deveria evitar.
 if (!bocchi_rate_ok('global', 60, 3600)) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
@@ -224,12 +225,18 @@ $bodyLines = array(
     str_repeat('-', 40),
     'IP: ' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '?') . '  ·  ' . date('c'),
 );
+// Quase-spam: a mensagem passou, mas pontuou. Aparecer no e-mail é o que
+// permite calibrar o $SPAM_LIMIT com casos reais em vez de no chute.
+if ($spam['score'] > 0) {
+    $bodyLines[] = 'Anti-spam: score ' . $spam['score'] . ' de ' . $SPAM_LIMIT
+        . ($spam['strong'] ? ' + sinal forte' : ', só sinais fracos')
+        . ' (' . implode('; ', $spam['why']) . ')';
+}
 $body = implode("\n", $bodyLines);
 $subject = '[Site] ' . ($lang === 'en' ? 'New contact' : 'Novo contato') . ' — ' . $topicLabel;
 $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
 
-define('BOCCHI_SEND', true);
-require_once __DIR__ . '/smtp.php';
+require_once __DIR__ . '/smtp.php';   // BOCCHI_SEND já definido no topo
 $smtp = bocchi_load_smtp_config(__DIR__);
 
 if (is_array($smtp) && !empty($smtp['host'])) {

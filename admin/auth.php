@@ -163,7 +163,12 @@ if ($code === '') {
     header('Location: ' . GH_AUTHORIZE . '?' . http_build_query([
         'client_id'    => $cfg['client_id'],
         'redirect_uri' => ORIGIN . '/admin/auth.php',
-        'scope'        => 'repo',
+        // "public_repo", não "repo": este repositório é público, e o escopo
+        // amplo daria ao token — que fica no navegador — escrita em TODOS os
+        // repositórios da conta, inclusive os privados, para editar um post.
+        // Se um dia o repositório do site virar privado, aqui volta a ser
+        // "repo": é o mínimo que o CMS aceita nesse caso.
+        'scope'        => 'public_repo',
         'state'        => $nonce,
         'allow_signup' => 'false',
     ]), true, 302);

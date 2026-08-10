@@ -100,6 +100,18 @@
       return ok;
     };
 
+    // Token de envio: o send.php só aceita POST que traga um, e quem emite é
+    // o token.php. Robô que dispara POST direto no endpoint — como chega
+    // quase todo spam de formulário — não passa, e ninguém precisa resolver
+    // captcha. Pedimos um no carregamento para o envio sair sem ida extra.
+    const tokenUrl = form.action.replace(/send\.php(?=$|[?#])/, 'token.php');
+    let token = '';
+    const fetchToken = () => fetch(tokenUrl, { headers: { 'Accept': 'application/json' } })
+      .then(res => res.json())
+      .then(data => (token = (data && data.token) || ''))
+      .catch(() => (token = ''));
+    fetchToken();
+
     form.addEventListener('input', (e) => {
       const wrap = e.target.closest && e.target.closest('.field');
       if (wrap) wrap.classList.remove('field--invalid');
@@ -116,12 +128,22 @@
       const label = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = isPT ? 'Enviando…' : 'Sending…'; }
 
-      fetch(form.action, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-        body: new FormData(form),
-      })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })).catch(() => ({ ok: res.ok, data: {} })))
+      const post = () => {
+        const body = new FormData(form);
+        body.append('t', token);
+        return fetch(form.action, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body,
+        }).then(res => res.json().then(data => ({ ok: res.ok, data })).catch(() => ({ ok: res.ok, data: {} })));
+      };
+
+      // Cada token vale um envio. Quando ele já foi gasto (segunda mensagem)
+      // ou venceu (aba aberta desde ontem), o servidor pede para repetir —
+      // pegamos um novo e reenviamos uma vez, sem incomodar quem escreveu.
+      (token ? Promise.resolve() : fetchToken())
+        .then(post)
+        .then(r => (r.data && r.data.retry ? fetchToken().then(post) : r))
         .then(({ ok, data }) => {
           if (ok && data.ok) {
             form.reset();
@@ -136,6 +158,8 @@
           setStatus(isPT ? 'Falha de conexão. Tente novamente ou use o e-mail.' : 'Connection error. Please try again or use email.', false);
         })
         .finally(() => {
+          token = '';        // gasto no servidor, com sucesso ou não
+          fetchToken();      // deixa outro pronto, caso a pessoa escreva de novo
           if (btn) { btn.disabled = false; btn.textContent = label; }
         });
     });
