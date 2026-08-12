@@ -13,12 +13,5 @@
     <pubDate>Wed, 12 Aug 2026 12:00:00 GMT</pubDate>
     
   </item>
-  <item>
-    <title>Como este blog funciona</title>
-    <link>https://bocchi.company/blog/como-este-blog-funciona</link>
-    <guid isPermaLink="true">https://bocchi.company/blog/como-este-blog-funciona</guid>
-    <pubDate>Fri, 07 Aug 2026 12:00:00 GMT</pubDate>
-    <description>O blog da Bocchi não tem banco de dados, não roda PHP para servir um post e não aceita upload no servidor de produção. Este primeiro texto explica por que, e como escrever nele.</description>
-  </item>
 </channel>
 </rss>
