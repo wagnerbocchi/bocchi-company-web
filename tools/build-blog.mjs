@@ -91,10 +91,42 @@ function slugify(s) {
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 }
 
-function formatDate(iso, lang) {
-  const d = new Date(iso + (iso.length === 10 ? 'T12:00:00Z' : ''));
+/**
+ * Fuso do site. O dia que aparece no post é o dia de quem escreveu, não o de
+ * Greenwich: sem isso um post das 21h vira "amanhã" na página, porque já passou
+ * da meia-noite em UTC.
+ */
+const SITE_TZ = 'America/Sao_Paulo';
+
+/**
+ * Instante de publicação a partir do que veio no frontmatter.
+ *
+ * O YAML transforma tanto "2026-08-12" quanto "2026-08-12T21:00:00-03:00" em
+ * Date. A diferença é que a data pura vira meia-noite UTC exata — e é assim
+ * que a reconhecemos. Nesse caso ancoramos ao MEIO-DIA UTC: com folga de 12h
+ * para cada lado, o dia do calendário não muda em fuso nenhum. Sem essa
+ * âncora, meia-noite UTC lida em São Paulo seria o dia ANTERIOR, e todo post
+ * antigo andaria um dia para trás.
+ */
+function toInstant(value) {
+  const d = value instanceof Date ? value : new Date(String(value).trim());
+  if (Number.isNaN(d.getTime())) return null;
+  const meiaNoiteUTC = d.getUTCHours() === 0 && d.getUTCMinutes() === 0
+    && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0;
+  return meiaNoiteUTC ? new Date(d.getTime() + 12 * 3600 * 1000) : d;
+}
+
+/** AAAA-MM-DD do instante, no fuso do site. */
+function diaDoSite(instant) {
+  const p = new Intl.DateTimeFormat('en-CA',
+    { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: SITE_TZ }).format(instant);
+  return p;   // en-CA já formata como AAAA-MM-DD
+}
+
+function formatDate(value, lang) {
+  const d = value instanceof Date ? value : toInstant(value);
   return new Intl.DateTimeFormat(lang === 'pt' ? 'pt-BR' : 'en-US',
-    { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(d);
+    { day: '2-digit', month: 'long', year: 'numeric', timeZone: SITE_TZ }).format(d);
 }
 
 // ------------------------------------------------------- shell do site (nav)
@@ -223,8 +255,11 @@ function readPosts() {
 
     if (!d.title) { fail(`${where}: falta "title"`); continue; }
     if (!d.date)  { fail(`${where}: falta "date"`); continue; }
-    const date = String(d.date instanceof Date ? d.date.toISOString().slice(0, 10) : d.date).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { fail(`${where}: "date" deve ser AAAA-MM-DD, veio "${d.date}"`); continue; }
+    // O instante ordena; o dia é o que aparece na página e na URL do feed.
+    const instant = toInstant(d.date);
+    if (!instant) { fail(`${where}: "date" não é uma data válida, veio "${d.date}"`); continue; }
+    const date = diaDoSite(instant);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { fail(`${where}: "date" deve ser AAAA-MM-DD [Thh:mm], veio "${d.date}"`); continue; }
 
     // "updated" sai cru em <meta content=...> e no <lastmod> do sitemap, então
     // é validado com o mesmo rigor de "date". Sem isso, dez caracteres de
@@ -250,7 +285,7 @@ function readPosts() {
     }
 
     posts.push({
-      file: where, lang, slug, date,
+      file: where, lang, slug, date, instant,
       title: String(d.title),
       excerpt: d.excerpt ? String(d.excerpt) : '',
       cover: d.cover ? '/' + String(d.cover).replace(/^\//, '') : '',
@@ -262,8 +297,11 @@ function readPosts() {
       body: fm.content,
     });
   }
-  // mais recente primeiro; empate resolvido pelo slug para o build ser determinístico
-  posts.sort((a, b) => (b.date.localeCompare(a.date)) || a.slug.localeCompare(b.slug));
+  // Mais recente primeiro, pelo INSTANTE — não pelo dia. Dois posts do mesmo
+  // dia se distinguem pela hora; só caem no desempate alfabético por slug (que
+  // existe para o build ser determinístico) quando nem a hora os separa, o que
+  // acontece com post antigo gravado sem hora.
+  posts.sort((a, b) => (b.instant - a.instant) || a.slug.localeCompare(b.slug));
   return posts;
 }
 
@@ -398,7 +436,7 @@ function renderPost(post, shell, siblings) {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    datePublished: post.date,
+    datePublished: post.instant.toISOString(),
     ...(post.updated ? { dateModified: post.updated } : {}),
     author: { '@type': 'Organization', name: 'Bocchi Company', url: `${SITE}/` },
     publisher: { '@id': `${SITE}/#org` },
@@ -421,7 +459,7 @@ function renderPost(post, shell, siblings) {
 
   return head({ lang: post.lang, title: `${post.title} — Bocchi Company`, description: desc, url,
                 image: post.cover ? SITE + post.cover : `${SITE}/assets/img/og-cover.png`,
-                published: post.date, modified: post.updated || post.date })
+                published: post.instant.toISOString(), modified: post.updated || post.date })
     + `<script type="application/ld+json">${JSON.stringify(ld)}</script>\n`
     + shell.nav + `
 
@@ -467,7 +505,7 @@ function renderFeed(posts) {
     <title>${esc(p.title)}</title>
     <link>${url}</link>
     <guid isPermaLink="true">${url}</guid>
-    <pubDate>${new Date(p.date + 'T12:00:00Z').toUTCString()}</pubDate>
+    <pubDate>${p.instant.toUTCString()}</pubDate>
     ${p.excerpt ? `<description>${esc(p.excerpt)}</description>` : ''}
   </item>`;
   }).join('\n');

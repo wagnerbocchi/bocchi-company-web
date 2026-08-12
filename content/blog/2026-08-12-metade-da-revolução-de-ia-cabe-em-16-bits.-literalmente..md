@@ -1,7 +1,7 @@
 ---
 title: Metade da revolução de IA cabe em 16 bits. Literalmente.
 slug: metade-da-revolucao
-date: 2026-08-12
+date: 2026-08-12T11:33:36-03:00
 lang: pt
 excerpt: ''
 tags:

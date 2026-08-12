@@ -58,12 +58,20 @@ collections:
           - 'Só minúsculas, números e hífen. Ex.: kerberoasting-na-pratica'
         hint: Vira /blog/<slug>. Depois de publicado, mudar isso quebra o link antigo.
 
-      - label: Data
+      - label: Data e hora
         name: date
         widget: datetime
         date_format: 'YYYY-MM-DD'
-        time_format: false
-        picker_utc: true
+        # Com hora, e não só o dia: dois posts publicados na MESMA data
+        # empatavam, e o desempate do gerador é alfabético por slug — ordem
+        # arbitrária, que não tem relação com qual saiu depois.
+        time_format: 'HH:mm'
+        # picker_utc false + o "Z" do format gravam o deslocamento junto
+        # (ex.: 2026-08-12T21:00:00-03:00). Assim um post da noite continua
+        # sendo do dia em que foi escrito, em vez de virar o dia seguinte por
+        # ter passado da meia-noite em UTC.
+        picker_utc: false
+        format: "YYYY-MM-DDTHH:mm:ssZ"
 
       - label: Idioma
         name: lang
