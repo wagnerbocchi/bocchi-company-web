@@ -45,19 +45,49 @@ Secrets*:
 
 | Secret | Valor |
 | --- | --- |
-| `FTP_HOST` | o host de FTP da Hostinger (ex.: `ftp.bocchi.company`) |
-| `FTP_USER` | o usuário da conta de FTP dedicada |
+| `FTP_HOST` | ver "Qual host usar" abaixo — a escolha tem consequência |
+| `FTP_USER` | o usuário da conta dedicada (ex.: `u323617778.github`) |
 | `FTP_PASSWORD` | a senha dessa conta |
 
 Sem os três, o job **não falha**: ele avisa e sai, e o `deploy.zip` continua
 disponível como artefato para upload manual.
 
+#### Qual host usar
+
+O hPanel sugere `ftp.<seu-domínio>`, e é justamente o que **não** convém aqui.
+O DNS do domínio é servido pela Cloudflare, então esse nome só resolveria se
+você criasse o registro lá — e criar significa publicar um `A` apontando para o
+IP de origem, sem proxy (FTP não passa por proxy HTTP). Isso entrega o IP real
+do servidor: qualquer um passa a alcançar a origem direto, contornando a
+Cloudflare para o site inteiro. Um subdomínio de FTP é a forma clássica de
+vazar a origem sem perceber.
+
+Em ordem de preferência:
+
+1. **O hostname do servidor da Hostinger** (algo como `srvNNNN.hstgr.io`, no
+   hPanel em *Plano de hospedagem*). É o único que costuma casar com o
+   certificado do FTP, então dá para manter a verificação ligada, e não liga o
+   seu domínio a IP nenhum publicamente.
+2. **O IP direto** (`ftp://212.85.6.57` no painel → use só `212.85.6.57`). Fica
+   dentro de um secret, então não é publicado. Em compensação **nenhum
+   certificado casa com um IP**: o deploy vai falhar na verificação, e aí é
+   preciso criar a variável `FTP_VERIFY_CERT=false` — uma decisão consciente,
+   que mantém o canal cifrado mas abre mão de saber com quem se está falando.
+3. **`ftp.<domínio>` na Cloudflare** — não faça, pelo motivo acima.
+
 **3. Opcional**, em *Variables* (não são secrets, são só configuração):
 
 | Variável | Padrão | Para quê |
 | --- | --- | --- |
-| `FTP_REMOTE_DIR` | `/public_html` | se a conta de FTP cair em outro caminho |
+| `FTP_REMOTE_DIR` | `/` | onde publicar, se a conta não for presa ao `public_html` |
+| `FTP_VERIFY_CERT` | `true` | `false` só se o `FTP_HOST` for um IP |
 | `FTP_DELETE_STALE` | `false` | `true` apaga no servidor o que sumiu do repositório |
+
+O padrão de `FTP_REMOTE_DIR` é `/` porque a conta dedicada é **presa** ao
+diretório configurado: ao logar, ela já está dentro do `public_html` e o
+enxerga como raiz. Se a conta que você usar não for presa, o job aborta
+explicando, e aí basta pôr o caminho completo
+(`/home/uXXXXXXX/domains/bocchi.company/public_html`) nessa variável.
 
 `FTP_DELETE_STALE` vem desligado porque só você sabe se há algo dentro do
 `public_html` que não vem deste repositório (um `.well-known/`, um arquivo
@@ -75,9 +105,13 @@ antiga até você apagar o arquivo à mão. Antes de ligar, confira o conteúdo 
 - **Não cancela no meio.** O job tem grupo de concorrência próprio com
   `cancel-in-progress: false`: dois pushes seguidos enfileiram, em vez de
   abortar um upload pela metade.
-- **Recusa destino suspeito.** Se o `FTP_REMOTE_DIR` não apontar para dentro do
-  `public_html`, o job aborta — é o que impede um espelho com apagamento de
-  alcançar as credenciais que moram um nível acima.
+- **Recusa destino suspeito, por conteúdo e não por nome.** Antes de enviar, o
+  job lista o diretório de destino: se achar `bocchi-smtp.php`,
+  `bocchi-oauth.php`, `.bocchi-state`, `domains` ou `public_html` ali dentro,
+  ele está na raiz da conta e aborta; se não achar `index.html`, não é a raiz do
+  site e também aborta. Conferir pelo nome do caminho não funcionaria: a conta
+  presa enxerga o `public_html` como `/`, e um `/` de conta não presa é
+  exatamente o lugar perigoso — mesmo nome, significados opostos.
 - **Confere o pacote antes de subir** (tem `.htaccess`, tem `index.html`, não
   tem `bocchi-*.php` nem `.env`/`.key`/`.pem`).
 - **Confere o site depois de subir**: `/`, `/blog/` e `/token.php` precisam

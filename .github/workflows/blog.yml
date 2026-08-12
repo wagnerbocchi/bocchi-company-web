@@ -193,7 +193,17 @@ jobs:
           # O lftp lê a senha desta variável com --env-password. Passar por
           # linha de comando a deixaria visível no /proc e em qualquer trace.
           LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          # "/" porque a conta de FTP dedicada é presa (chroot) ao próprio
+          # public_html: ao logar, ela JÁ está lá dentro, e um "/public_html"
+          # apontaria para um subdiretório que não existe. Se a conta usada não
+          # for presa, defina FTP_REMOTE_DIR com o caminho completo — a
+          # conferência abaixo detecta o caso e falha explicando.
+          REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/' }}
+          # Verificação do certificado. Ligada por padrão. Só desligue se o
+          # FTP_HOST for um IP (certificado nenhum casa com IP) e você tiver
+          # decidido conscientemente: com ela desligada o canal continua
+          # cifrado, mas deixa de haver garantia de com QUEM se está falando.
+          VERIFY_CERT: ${{ vars.FTP_VERIFY_CERT || 'true' }}
           # Apagar no servidor o que sumiu do repositório (post despublicado,
           # página renomeada). Deixado DESLIGADO por padrão: só o dono sabe se
           # há algo no public_html que não vem deste repositório. Para ligar,
@@ -203,14 +213,40 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Guarda contra destino errado. O bocchi-smtp.php e o
-          # bocchi-oauth.php moram UM NÍVEL ACIMA do public_html: um
-          # REMOTE_DIR apontando para a raiz da conta, com apagamento ligado,
-          # levaria as credenciais junto. Só publicamos dentro do public_html.
-          case "$REMOTE_DIR" in
-            */public_html|*/public_html/*) ;;
-            *) echo "REMOTE_DIR=$REMOTE_DIR não aponta para dentro do public_html — abortando"; exit 1 ;;
-          esac
+          COMUM="
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate $VERIFY_CERT;
+            set cmd:fail-exit true;
+            set net:max-retries 3;
+            set net:timeout 20;
+            open -u '$FTP_USER' --env-password 'ftp://$FTP_HOST';
+          "
+
+          # Guarda contra destino errado, por CONTEÚDO e não por nome de
+          # caminho. O nome não serve: a conta de FTP dedicada é presa ao
+          # public_html e enxerga o próprio diretório como "/", então exigir
+          # que o caminho contenha "public_html" reprovaria o destino certo e
+          # aprovaria um "/" que, numa conta não presa, é a raiz da conta —
+          # onde moram bocchi-smtp.php, bocchi-oauth.php e .bocchi-state.
+          # Listar e olhar o que tem lá dentro responde a pergunta de verdade:
+          # "este diretório é a raiz do site?".
+          lftp -c "$COMUM cd '$REMOTE_DIR'; cls -1;" > remoto.txt || {
+            echo "não consegui listar $REMOTE_DIR no servidor"; exit 1; }
+
+          for proibido in bocchi-smtp.php bocchi-oauth.php .bocchi-state domains public_html; do
+            if grep -qxF "$proibido" remoto.txt; then
+              echo "ABORTANDO: $REMOTE_DIR contém '$proibido' — isto é a raiz da conta, não o public_html."
+              echo "Publicar aqui espalharia o site por cima das credenciais. Ajuste a variável FTP_REMOTE_DIR."
+              exit 1
+            fi
+          done
+          if ! grep -qxF 'index.html' remoto.txt; then
+            echo "ABORTANDO: não achei index.html em $REMOTE_DIR — este diretório não parece a raiz do site."
+            echo "Conteúdo encontrado:"; head -20 remoto.txt
+            exit 1
+          fi
+          echo "destino conferido: $REMOTE_DIR é a raiz do site"
 
           DELETE_FLAG=""
           if [ "$DELETE_STALE" = "true" ]; then
@@ -226,14 +262,8 @@ jobs:
           # claro. cmd:fail-exit faz o job falhar de verdade quando o lftp
           # tropeça, em vez de sair 0 com o site pela metade.
           lftp -c "
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ssl:verify-certificate true;
-            set cmd:fail-exit true;
-            set net:max-retries 3;
-            set net:timeout 20;
+            $COMUM
             set mirror:parallel-transfer-count 4;
-            open -u '$FTP_USER' --env-password 'ftp://$FTP_HOST';
             mirror --reverse --verbose --no-perms $DELETE_FLAG 'site' '$REMOTE_DIR';
           "
 
