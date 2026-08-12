@@ -1,6 +1,8 @@
-# Deploy — upload manual pelo File Manager da Hostinger
+# Deploy
 
-O site é estático. Publicar é copiar arquivos para dentro do `public_html`.
+O site é estático. Publicar é copiar arquivos para dentro do `public_html` —
+automaticamente pelo GitHub Actions, ou à mão pelo File Manager quando for
+preciso.
 
 ## O layout do servidor
 
@@ -20,7 +22,76 @@ não dentro do site.
 
 ---
 
-## Publicar
+## Publicar automaticamente (padrão)
+
+Todo push na `main` — inclusive o que o painel do blog faz quando você salva um
+post — dispara o workflow *Blog*: ele regenera o HTML, empacota, e o job
+`publicar` envia o pacote por **FTPS** para o `public_html`. Não há passo
+manual: o post fica no ar em um ou dois minutos.
+
+### Configurar (uma vez)
+
+**1. Crie uma conta de FTP dedicada** no hPanel (*Arquivos → Contas FTP*),
+apontada para `public_html` e **só** para ela.
+
+> Não use a conta de FTP principal. Ela alcança a raiz da conta, onde moram o
+> `bocchi-smtp.php`, o `bocchi-oauth.php` e o `.bocchi-state`. Uma conta
+> limitada ao `public_html` faz com que o pior caso de um vazamento da
+> credencial seja o conteúdo público do site — que já é público — em vez das
+> credenciais de e-mail e do painel.
+
+**2. Cadastre os secrets** em *Settings → Secrets and variables → Actions →
+Secrets*:
+
+| Secret | Valor |
+| --- | --- |
+| `FTP_HOST` | o host de FTP da Hostinger (ex.: `ftp.bocchi.company`) |
+| `FTP_USER` | o usuário da conta de FTP dedicada |
+| `FTP_PASSWORD` | a senha dessa conta |
+
+Sem os três, o job **não falha**: ele avisa e sai, e o `deploy.zip` continua
+disponível como artefato para upload manual.
+
+**3. Opcional**, em *Variables* (não são secrets, são só configuração):
+
+| Variável | Padrão | Para quê |
+| --- | --- | --- |
+| `FTP_REMOTE_DIR` | `/public_html` | se a conta de FTP cair em outro caminho |
+| `FTP_DELETE_STALE` | `false` | `true` apaga no servidor o que sumiu do repositório |
+
+`FTP_DELETE_STALE` vem desligado porque só você sabe se há algo dentro do
+`public_html` que não vem deste repositório (um `.well-known/`, um arquivo
+solto). Com ele desligado, um post despublicado continua acessível pela URL
+antiga até você apagar o arquivo à mão. Antes de ligar, confira o conteúdo do
+`public_html` pelo File Manager.
+
+### O que o job garante
+
+- **FTPS obrigatório** (`ftp:ssl-force`), com o canal de dados também cifrado
+  (`ssl-protect-data`) — sem isso só o login sobe protegido e o conteúdo dos
+  arquivos vai em claro — e certificado verificado.
+- **Nunca roda em pull request**, e nunca fora da `main`. Um PR de fork não
+  recebe secrets e não alcança o servidor.
+- **Não cancela no meio.** O job tem grupo de concorrência próprio com
+  `cancel-in-progress: false`: dois pushes seguidos enfileiram, em vez de
+  abortar um upload pela metade.
+- **Recusa destino suspeito.** Se o `FTP_REMOTE_DIR` não apontar para dentro do
+  `public_html`, o job aborta — é o que impede um espelho com apagamento de
+  alcançar as credenciais que moram um nível acima.
+- **Confere o pacote antes de subir** (tem `.htaccess`, tem `index.html`, não
+  tem `bocchi-*.php` nem `.env`/`.key`/`.pem`).
+- **Confere o site depois de subir**: `/`, `/blog/` e `/token.php` precisam
+  responder 200, e `/antispam.php` precisa responder 403 — se o `.htaccess` não
+  subiu, o job fica vermelho em vez de fingir sucesso.
+
+### Se o deploy automático falhar
+
+O `deploy.zip` continua sendo publicado como artefato em toda execução. Caia
+para o procedimento manual abaixo e investigue depois.
+
+---
+
+## Publicar à mão (alternativa)
 
 ### 1. Pegue o `deploy.zip`
 

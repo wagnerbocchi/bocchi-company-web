@@ -1,9 +1,16 @@
 name: Blog
 
-# Gera o HTML do blog a partir do Markdown e commita o resultado no próprio
-# repositório. A ideia é que o repositório permaneça servível como está: seja
-# qual for o método de deploy (git pull no servidor, FTP, deploy automático da
-# hospedagem), os arquivos prontos já estão lá — nada precisa buildar no host.
+# Dois jobs:
+#   build     — gera o HTML do blog a partir do Markdown, commita o resultado
+#               no próprio repositório e publica o deploy.zip como artefato;
+#   publicar  — envia esse mesmo zip por FTPS para o public_html.
+#
+# O HTML gerado é commitado (em vez de existir só dentro do pacote) para que o
+# repositório permaneça servível como está: seja qual for o método de deploy —
+# este FTP, um git pull no servidor, upload manual — os arquivos prontos já
+# estão lá, e nada precisa buildar no host.
+#
+# Configuração do FTP e o que o job garante: docs/deploy.md.
 
 # Sem allowlist de paths, de propósito. O filtro original listava só o que
 # afeta o BLOG — mas este workflow também empacota o deploy.zip, e aí qualquer
@@ -85,11 +92,11 @@ jobs:
           build sobrescreve."
           git push
 
-      # O deploy é upload manual pelo File Manager da Hostinger. Este zip
-      # contém exatamente o que vai dentro do public_html — sem o Markdown
-      # fonte, sem o gerador, sem node_modules — e já com os dotfiles
+      # Este zip contém exatamente o que vai dentro do public_html — sem o
+      # Markdown fonte, sem o gerador, sem node_modules — e já com os dotfiles
       # (.htaccess), que se perdem quando se arrasta pasta pelo navegador.
-      # Assim não é preciso ter Node instalado para publicar.
+      # É o que o job "publicar" envia por FTPS, e também o que se baixa para
+      # subir à mão se o deploy automático estiver fora do ar.
       - name: Empacotar para upload
         if: github.event_name != 'pull_request'
         run: npm run package
@@ -106,3 +113,143 @@ jobs:
     # O job de build precisa de permissão de escrita só quando não é PR.
     permissions:
       contents: write
+
+  # ====================================================================
+  # Publicação no servidor
+  #
+  # Job separado do build de propósito, por dois motivos:
+  #
+  # 1. Concorrência. O build cancela execução anterior (cancel-in-progress),
+  #    o que é certo para um build e ERRADO para um upload: cancelar no meio
+  #    deixa o site pela metade. Este job tem grupo próprio e não cancela —
+  #    dois pushes seguidos enfileiram, não se atropelam.
+  # 2. Permissão. Aqui não se escreve no repositório; só se lê o artefato.
+  #
+  # Publica o MESMO zip que o build produziu, em vez de gerar de novo: o que
+  # vai ao ar é byte a byte o artefato que fica guardado para conferência.
+  # ====================================================================
+  publicar:
+    needs: build
+    # Nunca em pull request (não teria acesso aos secrets, e um PR de fork
+    # jamais pode alcançar o servidor) e nunca fora da main.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: deploy-ftp
+      cancel-in-progress: false
+    steps:
+      # Sem credencial configurada o job não falha: só avisa e sai. Assim o
+      # repositório continua buildando normalmente antes de alguém criar os
+      # secrets — e um fork nunca vê um workflow vermelho por isso.
+      - name: Há credenciais de FTP?
+        id: cred
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -n "$FTP_HOST" ] && [ -n "$FTP_USER" ] && [ -n "$FTP_PASSWORD" ]; then
+            echo "ok=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::FTP_HOST/FTP_USER/FTP_PASSWORD não configurados — pulando a publicação. Baixe o artefato 'deploy' e suba à mão."
+          fi
+
+      - name: Baixar o pacote gerado pelo build
+        if: steps.cred.outputs.ok == 'yes'
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy
+
+      - name: Abrir o pacote e conferir o conteúdo
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          set -euo pipefail
+          unzip -q deploy.zip -d site
+
+          # As mesmas barreiras do empacotador, de novo aqui: o que impede um
+          # deploy ruim tem que estar do lado de quem publica, não só do lado
+          # de quem empacota. Um artefato adulterado ou um empacotador
+          # alterado no futuro morrem aqui.
+          test -f site/.htaccess || { echo "sem .htaccess no pacote — abortando"; exit 1; }
+          test -f site/index.html || { echo "sem index.html no pacote — abortando"; exit 1; }
+          if find site -name 'bocchi-*.php' -o -name '.env*' -o -name '*.key' -o -name '*.pem' | grep -q .; then
+            echo "o pacote contém arquivo de credencial — abortando"; exit 1
+          fi
+          echo "pacote com $(find site -type f | wc -l) arquivo(s), $(du -sh site | cut -f1)"
+
+      - name: Instalar o lftp
+        if: steps.cred.outputs.ok == 'yes'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Enviar por FTPS
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          # O lftp lê a senha desta variável com --env-password. Passar por
+          # linha de comando a deixaria visível no /proc e em qualquer trace.
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/public_html' }}
+          # Apagar no servidor o que sumiu do repositório (post despublicado,
+          # página renomeada). Deixado DESLIGADO por padrão: só o dono sabe se
+          # há algo no public_html que não vem deste repositório. Para ligar,
+          # crie a variável FTP_DELETE_STALE com o valor "true" em
+          # Settings > Secrets and variables > Actions > Variables.
+          DELETE_STALE: ${{ vars.FTP_DELETE_STALE || 'false' }}
+        run: |
+          set -euo pipefail
+
+          # Guarda contra destino errado. O bocchi-smtp.php e o
+          # bocchi-oauth.php moram UM NÍVEL ACIMA do public_html: um
+          # REMOTE_DIR apontando para a raiz da conta, com apagamento ligado,
+          # levaria as credenciais junto. Só publicamos dentro do public_html.
+          case "$REMOTE_DIR" in
+            */public_html|*/public_html/*) ;;
+            *) echo "REMOTE_DIR=$REMOTE_DIR não aponta para dentro do public_html — abortando"; exit 1 ;;
+          esac
+
+          DELETE_FLAG=""
+          if [ "$DELETE_STALE" = "true" ]; then
+            DELETE_FLAG="--delete"
+            echo "modo: espelho com apagamento do que sumiu"
+          else
+            echo "modo: só envio (arquivos removidos do repo continuam no servidor)"
+          fi
+
+          # ftp:ssl-force recusa o servidor que não ofereça TLS, em vez de cair
+          # para texto claro. ssl-protect-data estende o TLS ao canal de dados:
+          # sem ele só o login vai cifrado e o conteúdo dos arquivos sobe em
+          # claro. cmd:fail-exit faz o job falhar de verdade quando o lftp
+          # tropeça, em vez de sair 0 com o site pela metade.
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate true;
+            set cmd:fail-exit true;
+            set net:max-retries 3;
+            set net:timeout 20;
+            set mirror:parallel-transfer-count 4;
+            open -u '$FTP_USER' --env-password 'ftp://$FTP_HOST';
+            mirror --reverse --verbose --no-perms $DELETE_FLAG 'site' '$REMOTE_DIR';
+          "
+
+      - name: Conferir o site no ar
+        if: steps.cred.outputs.ok == 'yes'
+        run: |
+          set -euo pipefail
+          # Um deploy que "passou" mas deixou o site fora do ar é o pior
+          # resultado possível: ninguém olha um check verde.
+          for url in https://bocchi.company/ https://bocchi.company/blog/ https://bocchi.company/token.php; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 20 "$url")
+            echo "$code  $url"
+            [ "$code" = "200" ] || { echo "esperava 200 em $url — verifique o deploy"; exit 1; }
+          done
+          # O .htaccess é o que faz os headers de segurança e o bloqueio dos
+          # includes funcionarem. Se ele não subiu, isto pega.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://bocchi.company/antispam.php)
+          [ "$code" = "403" ] || { echo "/antispam.php devolveu $code, esperado 403 — o .htaccess não está valendo"; exit 1; }
+          echo "site no ar e .htaccess ativo"
