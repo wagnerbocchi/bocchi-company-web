@@ -282,31 +282,77 @@ jobs:
         if: steps.cred.outputs.ok == 'yes'
         run: |
           set -euo pipefail
+
           # Um deploy que "passou" mas deixou o site fora do ar é o pior
-          # resultado possível: ninguém olha um check verde.
-          # O security.txt mora sob .well-known/, e o .htaccess nega tudo que
-          # comece com ponto. A regra é <FilesMatch>, que casa só com o NOME do
-          # arquivo ("security.txt", sem ponto inicial) e não com o diretório —
-          # então ele passa. Como isso depende de detalhe de servidor, quem
-          # confirma é a requisição de verdade, não a leitura da regra.
-          for url in https://bocchi.company/ https://bocchi.company/blog/ https://bocchi.company/token.php \
+          # resultado possível: ninguém olha um check verde. O segundo pior é
+          # este passo reprovar sempre — e foi o que aconteceu por semanas.
+          #
+          # O lftp reescreve cada arquivo como "remove + transfere", .htaccess
+          # incluído. Na janela em que ele não existe (ou existe pela metade),
+          # o LiteSpeed responde 403 ao site INTEIRO. Esta verificação rodava
+          # cerca de 1 segundo depois do último arquivo e lia exatamente essa
+          # janela: quatro deploys seguidos ficaram vermelhos com o site
+          # perfeito no ar.
+          #
+          # O `--retry` do curl não cobria o caso. Ele repete em erro de
+          # conexão, timeout e 408/429/5xx; 403 não está na lista, então o
+          # `--retry 3` que estava aqui nunca repetiu uma única vez.
+          #
+          # Um check que mente sempre é pior que check nenhum: ensina a ignorar
+          # o vermelho, e aí o dia em que o deploy quebrar de verdade passa
+          # batido. Por isso o retry abaixo é real — e o veredito continua
+          # estrito: esgotadas as tentativas, reprova.
+          verifica() {
+            local url="$1" esperado="$2" code=000
+            for _ in $(seq 1 12); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$url" || echo 000)
+              if [ "$code" = "$esperado" ]; then
+                printf '  ok     %-46s %s\n' "$url" "$code"
+                return 0
+              fi
+              sleep 5
+            done
+            printf '  FALHOU %-46s devolveu %s, esperado %s\n' "$url" "$code" "$esperado"
+            return 1
+          }
+
+          # Margem para o servidor reler o .htaccess recém-escrito antes da
+          # primeira tentativa. Não substitui o retry: encurta o caminho feliz.
+          sleep 10
+
+          falhas=0
+
+          # O site de pé, nas rotas que representam cada mecanismo: a home
+          # (arquivo direto), o blog (diretório), o token.php (PHP executando)
+          # e o security.txt, que fica sob .well-known/ e depende de o
+          # <FilesMatch "^\."> do .htaccess casar só com o NOME do arquivo.
+          for url in https://bocchi.company/ \
+                     https://bocchi.company/blog/ \
+                     https://bocchi.company/token.php \
                      https://bocchi.company/.well-known/security.txt; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 20 "$url")
-            echo "$code  $url"
-            [ "$code" = "200" ] || { echo "esperava 200 em $url — verifique o deploy"; exit 1; }
+            verifica "$url" 200 || falhas=1
           done
+
           # O .htaccess é o que faz os headers de segurança e o bloqueio dos
           # includes funcionarem. Se ele não subiu, isto pega.
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://bocchi.company/antispam.php)
-          [ "$code" = "403" ] || { echo "/antispam.php devolveu $code, esperado 403 — o .htaccess não está valendo"; exit 1; }
+          verifica https://bocchi.company/antispam.php 403 || falhas=1
 
           # O www tem que redirecionar para o apex. Enquanto não redirecionava,
           # o site inteiro existia em duplicata e o Search Console contava as
           # gêmeas como "página alternativa com tag canônica". Uma falha aqui
           # não derruba nada — por isso ninguém percebe sem uma verificação.
-          destino=$(curl -sS -o /dev/null -w '%{redirect_url}' --max-time 20 https://www.bocchi.company/sobre)
-          case "$destino" in
-            https://bocchi.company/sobre) echo "www redireciona para o apex" ;;
-            *) echo "www.bocchi.company/sobre não redirecionou para o apex (foi para '${destino:-nada}')"; exit 1 ;;
-          esac
-          echo "site no ar e .htaccess ativo"
+          destino=""
+          for _ in $(seq 1 12); do
+            destino=$(curl -sS -o /dev/null -w '%{redirect_url}' --max-time 20 https://www.bocchi.company/sobre || echo '')
+            [ "$destino" = "https://bocchi.company/sobre" ] && break
+            sleep 5
+          done
+          if [ "$destino" = "https://bocchi.company/sobre" ]; then
+            printf '  ok     %-46s 301\n' "www.bocchi.company/sobre"
+          else
+            printf "  FALHOU %-46s foi para '%s'\n" "www.bocchi.company/sobre" "${destino:-nada}"
+            falhas=1
+          fi
+
+          [ "$falhas" = "0" ] || { echo "verificação pós-deploy reprovou — veja as linhas FALHOU acima"; exit 1; }
+          echo "site no ar, .htaccess ativo e www redirecionando"
