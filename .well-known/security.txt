@@ -1,0 +1,13 @@
+# Bocchi Company — canal para reportar vulnerabilidade (RFC 9116)
+#
+# Se você encontrou uma falha em bocchi.company ou em um produto nosso
+# (Sigmaward, Awarenox), escreva. Respondemos, damos crédito a quem quiser e
+# não acionamos ninguém por pesquisa feita de boa-fé dentro do escopo abaixo.
+#
+# ATENÇÃO ao editar: o campo Expires é obrigatório e um arquivo vencido é
+# tratado como inválido pelas ferramentas que o leem. Renove a data.
+
+Contact: mailto:contato@bocchi.company
+Expires: 2027-08-19T00:00:00.000Z
+Preferred-Languages: pt-BR, en
+Canonical: https://bocchi.company/.well-known/security.txt

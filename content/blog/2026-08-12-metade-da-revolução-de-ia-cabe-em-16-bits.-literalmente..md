@@ -3,13 +3,13 @@ title: Metade da revolução de IA cabe em 16 bits. Literalmente.
 slug: metade-da-revolucao
 date: 2026-08-12T11:33:36-03:00
 lang: pt
-excerpt: ''
+excerpt: FP16 corta pela metade a memória de cada número e quase dobra o throughput em Tensor Cores — mas encolhe o intervalo dinâmico e traz overflow, underflow e loss scaling junto. Por que essa troca compensa, e quando não compensa.
 tags:
   - AI
   - Devops
   - Ai Engineer
 cover: /assets/img/blog/1780025129303.jpg
-cover_alt: ''
+cover_alt: Comparação dos formatos FP16 e FP32 em barras na mesma escala. FP16 usa 1 bit de sinal, 5 de expoente e 10 de mantissa; FP32 usa 1, 8 e 23 — FP16 ocupa metade do espaço.
 draft: false
 updated: ''
 ---

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#0A0E1C" />
 <title>Projetos — Bocchi Company</title>
-<meta name="description" content="Produtos próprios da Bocchi Company. Sigmaward: plataforma de SOC moderna e Sigma-native. Awarenox: plataforma de simulação de phishing e conscientização — uma alternativa moderna ao GoPhish." />
+<meta name="description" content="Produtos próprios da Bocchi Company: Sigmaward, plataforma de SOC Sigma-native, e Awarenox, simulação de phishing e conscientização — alternativa ao GoPhish." />
 <meta name="author" content="Bocchi Company" />
 
 <meta property="og:title" content="Projetos — Bocchi Company" />
@@ -34,6 +34,63 @@
 <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="assets/css/style.css?v=7" />
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Início",
+          "item": "https://bocchi.company/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Projetos",
+          "item": "https://bocchi.company/projetos"
+        }
+      ]
+    },
+    {
+      "@type": "ItemList",
+      "@id": "https://bocchi.company/projetos#products",
+      "name": "Projetos",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@type": "SoftwareApplication",
+            "name": "Sigmaward",
+            "description": "Plataforma de SOC moderna e Sigma-native.",
+            "url": "https://sigmaward.com",
+            "applicationCategory": "SecurityApplication",
+            "publisher": {
+              "@id": "https://bocchi.company/#org"
+            }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@type": "SoftwareApplication",
+            "name": "Awarenox",
+            "description": "Plataforma de simulação de phishing e conscientização.",
+            "url": "https://awarenox.com",
+            "applicationCategory": "SecurityApplication",
+            "publisher": {
+              "@id": "https://bocchi.company/#org"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}</script>
 </head>
 <body>
 <a class="skip-link" href="#top">Pular para o conteúdo</a>

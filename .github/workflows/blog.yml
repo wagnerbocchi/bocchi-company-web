@@ -205,11 +205,22 @@ jobs:
           # cifrado, mas deixa de haver garantia de com QUEM se está falando.
           VERIFY_CERT: ${{ vars.FTP_VERIFY_CERT || 'true' }}
           # Apagar no servidor o que sumiu do repositório (post despublicado,
-          # página renomeada). Deixado DESLIGADO por padrão: só o dono sabe se
-          # há algo no public_html que não vem deste repositório. Para ligar,
-          # crie a variável FTP_DELETE_STALE com o valor "true" em
-          # Settings > Secrets and variables > Actions > Variables.
-          DELETE_STALE: ${{ vars.FTP_DELETE_STALE || 'false' }}
+          # página renomeada). LIGADO por padrão.
+          #
+          # Ficou desligado por precaução, e a precaução saiu cara: o post
+          # "como-este-blog-funciona" foi marcado draft:true, sumiu do repo, do
+          # sitemap e do feed — e continuou respondendo 200 em
+          # /blog/como-este-blog-funciona, indexável, por semanas. Despublicar
+          # que não despublica é a pior falha possível aqui, porque não deixa
+          # rastro: o repositório mostra o estado certo e o site mostra outro.
+          #
+          # O conteúdo do public_html foi conferido contra o pacote antes desta
+          # mudança: só havia esse arquivo a mais. Se um dia for preciso manter
+          # no servidor algo que não venha deste repositório, defina a variável
+          # FTP_DELETE_STALE como "false" em Settings > Secrets and variables >
+          # Actions > Variables — e anote ali o que é, porque o espelho volta a
+          # ser a única fonte de verdade no dia em que ela for removida.
+          DELETE_STALE: ${{ vars.FTP_DELETE_STALE || 'true' }}
         run: |
           set -euo pipefail
 
@@ -273,7 +284,13 @@ jobs:
           set -euo pipefail
           # Um deploy que "passou" mas deixou o site fora do ar é o pior
           # resultado possível: ninguém olha um check verde.
-          for url in https://bocchi.company/ https://bocchi.company/blog/ https://bocchi.company/token.php; do
+          # O security.txt mora sob .well-known/, e o .htaccess nega tudo que
+          # comece com ponto. A regra é <FilesMatch>, que casa só com o NOME do
+          # arquivo ("security.txt", sem ponto inicial) e não com o diretório —
+          # então ele passa. Como isso depende de detalhe de servidor, quem
+          # confirma é a requisição de verdade, não a leitura da regra.
+          for url in https://bocchi.company/ https://bocchi.company/blog/ https://bocchi.company/token.php \
+                     https://bocchi.company/.well-known/security.txt; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 20 "$url")
             echo "$code  $url"
             [ "$code" = "200" ] || { echo "esperava 200 em $url — verifique o deploy"; exit 1; }
@@ -282,4 +299,14 @@ jobs:
           # includes funcionarem. Se ele não subiu, isto pega.
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://bocchi.company/antispam.php)
           [ "$code" = "403" ] || { echo "/antispam.php devolveu $code, esperado 403 — o .htaccess não está valendo"; exit 1; }
+
+          # O www tem que redirecionar para o apex. Enquanto não redirecionava,
+          # o site inteiro existia em duplicata e o Search Console contava as
+          # gêmeas como "página alternativa com tag canônica". Uma falha aqui
+          # não derruba nada — por isso ninguém percebe sem uma verificação.
+          destino=$(curl -sS -o /dev/null -w '%{redirect_url}' --max-time 20 https://www.bocchi.company/sobre)
+          case "$destino" in
+            https://bocchi.company/sobre) echo "www redireciona para o apex" ;;
+            *) echo "www.bocchi.company/sobre não redirecionou para o apex (foi para '${destino:-nada}')"; exit 1 ;;
+          esac
           echo "site no ar e .htaccess ativo"
