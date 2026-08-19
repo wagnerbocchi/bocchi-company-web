@@ -11,14 +11,14 @@
     <link>https://bocchi.company/blog/metade-da-revolucao</link>
     <guid isPermaLink="true">https://bocchi.company/blog/metade-da-revolucao</guid>
     <pubDate>Wed, 12 Aug 2026 14:33:36 GMT</pubDate>
-    
+    <description>FP16 corta pela metade a memória de cada número e quase dobra o throughput em Tensor Cores — mas encolhe o intervalo dinâmico e traz overflow, underflow e loss scaling junto. Por que essa troca compensa, e quando não compensa.</description>
   </item>
   <item>
     <title>Ferramenta Pentest Lab</title>
     <link>https://bocchi.company/blog/ferramenta-pentest-lab</link>
     <guid isPermaLink="true">https://bocchi.company/blog/ferramenta-pentest-lab</guid>
     <pubDate>Wed, 12 Aug 2026 13:50:01 GMT</pubDate>
-    
+    <description>Normalização da saída das ferramentas com mapeamento para MITRE ATT&amp;CK, Sliver, Ligolo-ng, Netexec e searchsploit no laboratório, e CI com build em cache e scanning via Trivy. O que mudou no repositório de pentest lab, e o que ainda falta.</description>
   </item>
 </channel>
 </rss>

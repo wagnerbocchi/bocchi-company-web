@@ -27,7 +27,7 @@ const ZIP = path.join(ROOT, 'deploy.zip');
 const NO_ZIP = process.argv.includes('--no-zip');
 
 /** Diretórios que vão inteiros para o public_html. */
-const DIRS = ['assets', 'en', 'blog', 'admin'];
+const DIRS = ['assets', 'en', 'blog', 'admin', '.well-known'];
 
 /** Arquivos avulsos da raiz. Padrões glob simples só de sufixo/nome exato. */
 const FILES = ['.htaccess', 'robots.txt', 'sitemap.xml', 'feed.xml', 'send.php', 'smtp.php', 'token.php', 'antispam.php'];
@@ -102,12 +102,25 @@ for (const dir of DIRS) {
 // send.php agora depende de antispam.php e token.php: um pacote sem eles sobe
 // com o formulário respondendo erro em todo envio.
 for (const obrigatorio of ['.htaccess', 'index.html', 'admin/.htaccess', 'assets/css/style.css',
-                           'send.php', 'antispam.php', 'token.php']) {
+                           'send.php', 'antispam.php', 'token.php', '.well-known/security.txt']) {
   if (!fs.existsSync(path.join(DIST, obrigatorio))) problemas.push(`faltando no pacote: ${obrigatorio}`);
 }
 
 if (!fs.existsSync(path.join(DIST, 'blog', 'index.html'))) {
   problemas.push('faltando no pacote: blog/index.html — rode "npm run build:blog" antes');
+}
+
+// RFC 9116: security.txt vencido é lido como inválido. O arquivo não avisa
+// sozinho que caducou, então o empacotamento avisa — sem falhar, porque um
+// deploy travado por causa de uma data é pior que um security.txt velho.
+const sec = path.join(DIST, '.well-known', 'security.txt');
+if (fs.existsSync(sec)) {
+  const m = fs.readFileSync(sec, 'utf8').match(/^Expires:\s*(\S+)/mi);
+  const quando = m && Date.parse(m[1]);
+  const dias = quando ? Math.round((quando - Date.now()) / 86400000) : null;
+  if (dias === null)      console.warn('AVISO: .well-known/security.txt sem campo Expires válido (RFC 9116).');
+  else if (dias < 0)      console.warn(`AVISO: .well-known/security.txt venceu há ${-dias} dia(s) — renove o campo Expires.`);
+  else if (dias < 30)     console.warn(`AVISO: .well-known/security.txt vence em ${dias} dia(s) — renove o campo Expires.`);
 }
 
 if (problemas.length) {

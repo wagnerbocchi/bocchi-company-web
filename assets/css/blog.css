@@ -54,6 +54,18 @@
   margin-bottom: 12px;
 }
 
+/* Selo de idioma: aparece no card quando o post está em outra língua que não
+   a da página que o lista (o índice em inglês listando os artigos em
+   português). Avisa antes do clique, em vez de depois. */
+.post-card__lang {
+  border: 1px solid var(--line, rgba(237, 241, 247, .18));
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
 .post-card__title {
   font-family: var(--display);
   font-size: clamp(21px, 2.3vw, 27px);

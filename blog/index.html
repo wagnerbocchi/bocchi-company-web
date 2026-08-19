@@ -34,10 +34,11 @@
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="/assets/css/style.css?v=7" />
-<link rel="stylesheet" href="/assets/css/blog.css?v=1" />
+<link rel="stylesheet" href="/assets/css/blog.css?v=2" />
 </head>
 <body>
 <a class="skip-link" href="#top">Pular para o conteúdo</a>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Início","item":"https://bocchi.company/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://bocchi.company/blog/"}]},{"@type":"Blog","@id":"https://bocchi.company/blog/#blog","url":"https://bocchi.company/blog/","name":"Blog — Bocchi Company","description":"Artigos técnicos da Bocchi Company sobre segurança ofensiva, detecção e engenharia de software.","inLanguage":"pt-BR","publisher":{"@id":"https://bocchi.company/#org"},"blogPost":[{"@type":"BlogPosting","headline":"Metade da revolução de IA cabe em 16 bits. Literalmente.","url":"https://bocchi.company/blog/metade-da-revolucao","datePublished":"2026-08-12T14:33:36.000Z","inLanguage":"pt-BR"},{"@type":"BlogPosting","headline":"Ferramenta Pentest Lab","url":"https://bocchi.company/blog/ferramenta-pentest-lab","datePublished":"2026-08-12T13:50:01.000Z","inLanguage":"pt-BR"}]}]}</script>
 <header class="nav" id="nav">
   <div class="container nav__inner">
     <a href="/" class="nav__brand" aria-label="Bocchi Company — início">
@@ -109,9 +110,10 @@
             <time datetime="2026-08-12">12 de agosto de 2026</time>
             <span aria-hidden="true">·</span>
             <span>1 min de leitura</span>
+            
           </div>
           <h2 class="post-card__title"><a href="/blog/metade-da-revolucao">Metade da revolução de IA cabe em 16 bits. Literalmente.</a></h2>
-          
+          <p class="post-card__excerpt">FP16 corta pela metade a memória de cada número e quase dobra o throughput em Tensor Cores — mas encolhe o intervalo dinâmico e traz overflow, underflow e loss scaling junto. Por que essa troca compensa, e quando não compensa.</p>
           <ul class="post-card__tags"><li>AI</li><li>Devops</li><li>Ai Engineer</li></ul>
         </div>
       </article>
@@ -124,9 +126,10 @@
             <time datetime="2026-08-12">12 de agosto de 2026</time>
             <span aria-hidden="true">·</span>
             <span>1 min de leitura</span>
+            
           </div>
           <h2 class="post-card__title"><a href="/blog/ferramenta-pentest-lab">Ferramenta Pentest Lab</a></h2>
-          
+          <p class="post-card__excerpt">Normalização da saída das ferramentas com mapeamento para MITRE ATT&amp;CK, Sliver, Ligolo-ng, Netexec e searchsploit no laboratório, e CI com build em cache e scanning via Trivy. O que mudou no repositório de pentest lab, e o que ainda falta.</p>
           <ul class="post-card__tags"><li>CyberSecurity</li><li>EthicalHacking</li><li>Pentest</li></ul>
         </div>
       </article>

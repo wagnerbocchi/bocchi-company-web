@@ -34,6 +34,7 @@ const SITE = 'https://bocchi.company';
 
 const LANGS = {
   pt: {
+    lang: 'pt',
     dir: 'blog',
     base: '/blog/',
     shellFrom: 'sobre.html',
@@ -52,8 +53,11 @@ const LANGS = {
     tocTitle: 'Neste artigo',
     skip: 'Pular para o conteúdo',
     navLabel: 'Blog',
+    // Rótulo de um card cujo post está em OUTRO idioma que não o desta página.
+    foreignLabel: { pt: 'Em português', en: 'Em inglês' },
   },
   en: {
+    lang: 'en',
     dir: 'en/blog',
     base: '/en/blog/',
     shellFrom: 'en/about.html',
@@ -63,7 +67,7 @@ const LANGS = {
     description: 'Technical writing from Bocchi Company on offensive security, detection engineering, and software.',
     eyebrow: '04 / Blog',
     heading: ['Field notes', 'from operators.'],
-    sub: 'What we learn attacking, detecting, and building — written for the person who has to touch the keyboard next.',
+    sub: 'What we learn attacking, detecting, and building — written for the person who has to touch the keyboard next. The articles are written in Portuguese.',
     empty: 'No posts published yet. Soon.',
     backToList: '← All articles',
     readingTime: (n) => `${n} min read`,
@@ -72,6 +76,7 @@ const LANGS = {
     tocTitle: 'In this article',
     skip: 'Skip to content',
     navLabel: 'Blog',
+    foreignLabel: { pt: 'In Portuguese', en: 'In English' },
   },
 };
 
@@ -121,6 +126,23 @@ function diaDoSite(instant) {
   const p = new Intl.DateTimeFormat('en-CA',
     { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: SITE_TZ }).format(instant);
   return p;   // en-CA já formata como AAAA-MM-DD
+}
+
+/**
+ * Corta um texto para caber numa meta description sem cortar palavra ao meio.
+ *
+ * O excerpt tem dois consumidores com necessidades opostas: o card do índice
+ * (onde um parágrafo inteiro é bom) e a <meta name="description"> (onde o
+ * Google trunca por volta de 160 caracteres e o resto vira reticências dele).
+ * Escrever o excerpt curto o bastante para o SERP empobrece o card; então o
+ * excerpt continua inteiro na página e no feed, e só a description é clampada.
+ */
+function clamp(texto, max = 155) {
+  const t = String(texto).trim();
+  if (t.length <= max) return t;
+  const corte = t.slice(0, max);
+  const espaco = corte.lastIndexOf(' ');
+  return (espaco > max * 0.6 ? corte.slice(0, espaco) : corte).replace(/[\s,;:.\u2014-]+$/, '') + '…';
 }
 
 function formatDate(value, lang) {
@@ -314,9 +336,22 @@ function renderBody(post) {
 
 // ---------------------------------------------------------------- templates
 
-function head({ lang, title, description, url, image, type = 'article', published, modified, extraCss = true }) {
+/**
+ * `alternates` é a lista de versões em outro idioma DESTA página, no formato
+ * [{ hreflang, href }]. Quem chama decide — e é isso que corrige o hreflang
+ * antigo, que saía fixo em toda página.
+ *
+ * O erro anterior: todo post declarava `hreflang="en" -> /en/blog/`, ou seja,
+ * afirmava que a PÁGINA ÍNDICE em inglês era sua tradução. O índice, por sua
+ * vez, apontava de volta para o índice — nunca para o post. hreflang sem link
+ * de retorno recíproco o Google descarta inteiro, então aquilo não só não
+ * ajudava: escondia o pareamento real quando ele existisse.
+ *
+ * Regra agora: só sai hreflang quando existe de fato outra versão da MESMA
+ * página. Post sem tradução não declara nada — que é a resposta correta.
+ */
+function head({ lang, title, description, url, image, type = 'article', published, modified, extraCss = true, alternates = [] }) {
   const cfg = LANGS[lang];
-  const alt = lang === 'pt' ? '/en/blog/' : '/blog/';
   return `<!DOCTYPE html>
 <html lang="${cfg.htmlLang}">
 <head>
@@ -345,15 +380,14 @@ ${modified ? `<meta property="article:modified_time" content="${esc(modified)}" 
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/logos/apple-touch-icon.png" />
 
 <link rel="canonical" href="${esc(url)}" />
-<link rel="alternate" type="application/rss+xml" title="Bocchi Company — Blog" href="/feed.xml" />
-<link rel="alternate" hreflang="pt-BR" href="${SITE}${lang === 'pt' ? '/blog/' : alt}" />
-<link rel="alternate" hreflang="en" href="${SITE}${lang === 'en' ? '/en/blog/' : alt}" />
+<link rel="alternate" type="application/rss+xml" title="Bocchi Company — Blog" href="/feed.xml" />${alternates.length ? '\n' + alternates
+  .map((a) => `<link rel="alternate" hreflang="${a.hreflang}" href="${esc(a.href)}" />`).join('\n') : ''}
 
 <link rel="preload" href="/assets/fonts/hankengrotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="/assets/css/style.css?v=7" />${extraCss ? `
-<link rel="stylesheet" href="/assets/css/blog.css?v=1" />` : ''}
+<link rel="stylesheet" href="/assets/css/blog.css?v=2" />` : ''}
 </head>
 <body>
 <a class="skip-link" href="#top">${cfg.skip}</a>
@@ -368,8 +402,25 @@ function tail() {
 `;
 }
 
+/**
+ * O card aponta para a URL do post NO IDIOMA EM QUE ELE FOI ESCRITO, não para
+ * a base da página que o lista. É o que permite o índice em inglês mostrar os
+ * artigos em português sem inventar uma URL /en/blog/<slug> que serviria texto
+ * em português — incompatibilidade de idioma que o Google desindexa, e a razão
+ * de não haver tradução automática aqui.
+ *
+ * Quando o idioma do post difere do da página, o link ganha `hreflang`/`lang`
+ * (para o navegador e o leitor de tela anunciarem a troca) e um selo visível,
+ * para o leitor saber antes de clicar.
+ */
 function postCard(post, cfg) {
-  const href = `${cfg.base}${post.slug}`;
+  const postCfg = LANGS[post.lang];
+  const href = `${postCfg.base}${post.slug}`;
+  const foreign = post.lang !== cfg.lang;
+  const langAttrs = foreign ? ` hreflang="${postCfg.htmlLang}" lang="${postCfg.htmlLang}"` : '';
+  const badge = foreign
+    ? `<span class="post-card__lang" lang="${cfg.htmlLang}">${esc(cfg.foreignLabel[post.lang])}</span>`
+    : '';
   const tags = post.tags.slice(0, 3)
     .map((t) => `<li>${esc(t)}</li>`).join('');
   return `      <article class="post-card reveal">
@@ -378,17 +429,32 @@ function postCard(post, cfg) {
         </a>` : ''}
         <div class="post-card__body">
           <div class="post-card__meta">
-            <time datetime="${post.date}">${formatDate(post.date, post.lang)}</time>
+            <time datetime="${post.date}">${formatDate(post.date, cfg.lang)}</time>
             <span aria-hidden="true">·</span>
             <span>${cfg.readingTime(post.rendered.minutes)}</span>
+            ${badge ? `<span aria-hidden="true">·</span>\n            ${badge}` : ''}
           </div>
-          <h2 class="post-card__title"><a href="${href}">${esc(post.title)}</a></h2>
+          <h2 class="post-card__title"><a href="${href}"${langAttrs}>${esc(post.title)}</a></h2>
           ${post.excerpt ? `<p class="post-card__excerpt">${esc(post.excerpt)}</p>` : ''}
           ${tags ? `<ul class="post-card__tags">${tags}</ul>` : ''}
         </div>
       </article>`;
 }
 
+/**
+ * O índice lista TODOS os posts publicados, não só os do próprio idioma.
+ *
+ * O blog é escrito em português. Antes, o índice em inglês filtrava por
+ * `lang === 'en'`, não sobrava nada e a página ficava no ar dizendo "no posts
+ * published yet" — enquanto havia artigos publicados a um clique dali. Para
+ * quem lê o site em inglês isso é um beco sem saída, e para o robô é uma
+ * página sem conteúdo, candidata a "rastreada, mas não indexada".
+ *
+ * Cada card aponta para o post na URL do idioma original e vem marcado com o
+ * idioma (ver postCard). A moldura da página segue em inglês: a página É em
+ * inglês, o que ela indexa é que está em português — e isso está declarado no
+ * HTML, não escondido.
+ */
 function renderIndex(lang, posts, shell) {
   const cfg = LANGS[lang];
   const url = `${SITE}${cfg.base}`;
@@ -396,7 +462,48 @@ function renderIndex(lang, posts, shell) {
     ? posts.map((p) => postCard(p, cfg)).join('\n')
     : `      <div class="project-soon reveal"><strong>${esc(cfg.empty)}</strong></div>`;
 
-  return head({ lang, title: cfg.title, description: cfg.description, url, image: `${SITE}/assets/img/og-cover.png`, type: 'website' })
+  // Os dois índices existem e são equivalentes, cada um na sua língua: este é
+  // um par hreflang legítimo, com link de retorno dos dois lados.
+  const alternates = [
+    { hreflang: 'pt-BR', href: `${SITE}${LANGS.pt.base}` },
+    { hreflang: 'en', href: `${SITE}${LANGS.en.base}` },
+  ];
+
+  // O índice descreve a coleção e a trilha; cada post já traz o seu próprio
+  // BlogPosting. blogPost aqui aponta para as URLs dos posts no idioma em que
+  // foram escritos — o mesmo destino dos cards.
+  const ld = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: lang === 'pt' ? 'Início' : 'Home',
+            item: `${SITE}${lang === 'pt' ? '/' : '/en/'}` },
+          { '@type': 'ListItem', position: 2, name: cfg.navLabel, item: url },
+        ],
+      },
+      {
+        '@type': 'Blog',
+        '@id': `${url}#blog`,
+        url,
+        name: cfg.title,
+        description: cfg.description,
+        inLanguage: cfg.htmlLang,
+        publisher: { '@id': `${SITE}/#org` },
+        blogPost: posts.map((p) => ({
+          '@type': 'BlogPosting',
+          headline: p.title,
+          url: `${SITE}${LANGS[p.lang].base}${p.slug}`,
+          datePublished: p.instant.toISOString(),
+          inLanguage: LANGS[p.lang].htmlLang,
+        })),
+      },
+    ],
+  };
+
+  return head({ lang, title: cfg.title, description: cfg.description, url, image: `${SITE}/assets/img/og-cover.png`, type: 'website', alternates })
+    + `<script type="application/ld+json">${JSON.stringify(ld)}</script>\n`
     + shell.nav + `
 
 <main id="top">
@@ -430,7 +537,10 @@ function renderPost(post, shell, siblings) {
   const cfg = LANGS[post.lang];
   const url = `${SITE}${cfg.base}${post.slug}`;
   const { html, toc, minutes } = post.rendered;
-  const desc = post.excerpt || `${post.title} — Bocchi Company`;
+  // Sem excerpt a description caía em "<título> — Bocchi Company", ou seja, o
+  // próprio título repetido: o Google descarta e inventa o snippet a partir do
+  // corpo. Com excerpt, ela é o resumo — clampado ao que cabe no SERP.
+  const desc = post.excerpt ? clamp(post.excerpt) : `${post.title} — Bocchi Company`;
 
   const ld = {
     '@context': 'https://schema.org',
@@ -457,9 +567,24 @@ function renderPost(post, shell, siblings) {
   const next = siblings.next
     ? `<a class="post-nav__item post-nav__item--next" href="${cfg.base}${siblings.next.slug}">${esc(siblings.next.title)} <span>→</span></a>` : '';
 
+  // hreflang só quando existe MESMO outra versão deste post (pareada por
+  // translation_of no frontmatter). Sem tradução, nenhuma tag — ver head().
+  const alternates = post.translation
+    ? [
+        { hreflang: LANGS[post.lang].htmlLang, href: url },
+        { hreflang: LANGS[post.translation.lang].htmlLang,
+          href: `${SITE}${LANGS[post.translation.lang].base}${post.translation.slug}` },
+      ]
+    : [];
+
   return head({ lang: post.lang, title: `${post.title} — Bocchi Company`, description: desc, url,
                 image: post.cover ? SITE + post.cover : `${SITE}/assets/img/og-cover.png`,
-                published: post.instant.toISOString(), modified: post.updated || post.date })
+                published: post.instant.toISOString(),
+                // Mesmo formato do published_time. Antes saía "2026-08-12" ao
+                // lado de um ISO completo, o que faz o Google ler datas com
+                // precisões diferentes para o mesmo artigo.
+                modified: post.updated ? `${post.updated}T00:00:00Z` : post.instant.toISOString(),
+                alternates })
     + `<script type="application/ld+json">${JSON.stringify(ld)}</script>\n`
     + shell.nav + `
 
@@ -536,8 +661,13 @@ function updateSitemap(posts, today) {
   for (const lang of ['pt', 'en']) {
     const cfg = LANGS[lang];
     const langPosts = posts.filter((p) => p.lang === lang);
-    if (!langPosts.length) continue;
-    entries.push(`  <url>\n    <loc>${SITE}${cfg.base}</loc>\n    <lastmod>${langPosts[0].updated || langPosts[0].date}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`);
+    // O índice do idioma entra SEMPRE que houver algum post publicado, mesmo
+    // que nenhum seja daquele idioma: /en/blog/ lista os artigos em português
+    // e é uma página real. Antes ela ficava fora do sitemap por causa do
+    // filtro por idioma — no ar, mas invisível para o rastreador.
+    if (!posts.length) continue;
+    const recente = (langPosts[0] || posts[0]);
+    entries.push(`  <url>\n    <loc>${SITE}${cfg.base}</loc>\n    <lastmod>${recente.updated || recente.date}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`);
     for (const p of langPosts) {
       entries.push(`  <url>\n    <loc>${SITE}${cfg.base}${p.slug}</loc>\n    <lastmod>${p.updated || p.date}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.6</priority>\n  </url>`);
     }
@@ -609,13 +739,20 @@ function main() {
   for (const p of published) p.rendered = renderBody(p);
 
   // Um post EN referenciando um post PT inexistente é erro de digitação.
-  const bySlug = new Set(published.map((p) => `${p.lang}/${p.slug}`));
+  // Além de validar, o pareamento é GRAVADO nos dois lados (p.translation): é
+  // dele que sai o hreflang do post, e hreflang só vale se os dois se
+  // apontarem mutuamente. Declarar só de um lado o Google ignora.
+  const bySlug = new Map(published.map((p) => [`${p.lang}/${p.slug}`, p]));
   for (const p of published) {
     if (!p.translationOf) continue;
     const other = p.lang === 'pt' ? 'en' : 'pt';
-    if (!bySlug.has(`${other}/${p.translationOf}`)) {
+    const par = bySlug.get(`${other}/${p.translationOf}`);
+    if (!par) {
       fail(`${p.file}: translation_of aponta para "${p.translationOf}", que não existe em ${other}`);
+      continue;
     }
+    p.translation = par;
+    par.translation = p;
   }
 
   if (errors.length) {
@@ -632,7 +769,10 @@ function main() {
     const cfg = LANGS[lang];
     const langPosts = published.filter((p) => p.lang === lang);
 
-    write(path.join(cfg.dir, 'index.html'), renderIndex(lang, langPosts, shell));
+    // O índice lista todos os posts (ver renderIndex); só as PÁGINAS de post
+    // são geradas por idioma — um post em português não vira arquivo dentro
+    // de en/blog/, porque a URL declararia inglês e serviria português.
+    write(path.join(cfg.dir, 'index.html'), renderIndex(lang, published, shell));
     written++;
 
     langPosts.forEach((post, i) => {

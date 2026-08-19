@@ -34,6 +34,68 @@
 <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="assets/css/style.css?v=7" />
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Início",
+          "item": "https://bocchi.company/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Serviços",
+          "item": "https://bocchi.company/servicos"
+        }
+      ]
+    },
+    {
+      "@type": "Service",
+      "@id": "https://bocchi.company/servicos#service",
+      "name": "Serviços",
+      "url": "https://bocchi.company/servicos",
+      "provider": {
+        "@id": "https://bocchi.company/#org"
+      },
+      "areaServed": "BR",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Serviços",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Pentest & Red Teaming",
+              "description": "Teste de intrusão e simulação de adversário em aplicações, redes e nuvem, com relatório de remediação."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Campanhas de Phishing",
+              "description": "Simulação de phishing controlada e programa de conscientização, com métricas por campanha."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Desenvolvimento de Software",
+              "description": "Engenharia de software com segurança desde o projeto, incluindo revisão de código e esteira de CI/CD."
+            }
+          }
+        ]
+      }
+    }
+  ]
+}</script>
 </head>
 <body>
 <a class="skip-link" href="#top">Pular para o conteúdo</a>

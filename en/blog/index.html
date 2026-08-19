@@ -34,10 +34,11 @@
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/fonts.css?v=1" />
 <link rel="stylesheet" href="/assets/css/style.css?v=7" />
-<link rel="stylesheet" href="/assets/css/blog.css?v=1" />
+<link rel="stylesheet" href="/assets/css/blog.css?v=2" />
 </head>
 <body>
 <a class="skip-link" href="#top">Skip to content</a>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://bocchi.company/en/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://bocchi.company/en/blog/"}]},{"@type":"Blog","@id":"https://bocchi.company/en/blog/#blog","url":"https://bocchi.company/en/blog/","name":"Blog — Bocchi Company","description":"Technical writing from Bocchi Company on offensive security, detection engineering, and software.","inLanguage":"en","publisher":{"@id":"https://bocchi.company/#org"},"blogPost":[{"@type":"BlogPosting","headline":"Metade da revolução de IA cabe em 16 bits. Literalmente.","url":"https://bocchi.company/blog/metade-da-revolucao","datePublished":"2026-08-12T14:33:36.000Z","inLanguage":"pt-BR"},{"@type":"BlogPosting","headline":"Ferramenta Pentest Lab","url":"https://bocchi.company/blog/ferramenta-pentest-lab","datePublished":"2026-08-12T13:50:01.000Z","inLanguage":"pt-BR"}]}]}</script>
 <header class="nav" id="nav">
   <div class="container nav__inner">
     <a href="/en/" class="nav__brand" aria-label="Bocchi Company — home">
@@ -93,14 +94,47 @@
       <span>04 / Blog</span>
     </div>
     <h1 class="page-hero__title reveal" data-reveal-delay="60">Field notes <span class="ital">from operators.</span></h1>
-    <p class="page-hero__sub reveal" data-reveal-delay="120">What we learn attacking, detecting, and building — written for the person who has to touch the keyboard next.</p>
+    <p class="page-hero__sub reveal" data-reveal-delay="120">What we learn attacking, detecting, and building — written for the person who has to touch the keyboard next. The articles are written in Portuguese.</p>
   </div>
 </section>
 
 <section class="section" id="posts">
   <div class="container">
     <div class="post-list">
-      <div class="project-soon reveal"><strong>No posts published yet. Soon.</strong></div>
+      <article class="post-card reveal">
+        <a class="post-card__media" href="/blog/metade-da-revolucao" tabindex="-1" aria-hidden="true">
+          <img src="/assets/img/blog/1780025129303.jpg" alt="" loading="lazy" decoding="async" />
+        </a>
+        <div class="post-card__body">
+          <div class="post-card__meta">
+            <time datetime="2026-08-12">August 12, 2026</time>
+            <span aria-hidden="true">·</span>
+            <span>1 min read</span>
+            <span aria-hidden="true">·</span>
+            <span class="post-card__lang" lang="en">In Portuguese</span>
+          </div>
+          <h2 class="post-card__title"><a href="/blog/metade-da-revolucao" hreflang="pt-BR" lang="pt-BR">Metade da revolução de IA cabe em 16 bits. Literalmente.</a></h2>
+          <p class="post-card__excerpt">FP16 corta pela metade a memória de cada número e quase dobra o throughput em Tensor Cores — mas encolhe o intervalo dinâmico e traz overflow, underflow e loss scaling junto. Por que essa troca compensa, e quando não compensa.</p>
+          <ul class="post-card__tags"><li>AI</li><li>Devops</li><li>Ai Engineer</li></ul>
+        </div>
+      </article>
+      <article class="post-card reveal">
+        <a class="post-card__media" href="/blog/ferramenta-pentest-lab" tabindex="-1" aria-hidden="true">
+          <img src="/assets/img/blog/1781705915272.jpg" alt="" loading="lazy" decoding="async" />
+        </a>
+        <div class="post-card__body">
+          <div class="post-card__meta">
+            <time datetime="2026-08-12">August 12, 2026</time>
+            <span aria-hidden="true">·</span>
+            <span>1 min read</span>
+            <span aria-hidden="true">·</span>
+            <span class="post-card__lang" lang="en">In Portuguese</span>
+          </div>
+          <h2 class="post-card__title"><a href="/blog/ferramenta-pentest-lab" hreflang="pt-BR" lang="pt-BR">Ferramenta Pentest Lab</a></h2>
+          <p class="post-card__excerpt">Normalização da saída das ferramentas com mapeamento para MITRE ATT&amp;CK, Sliver, Ligolo-ng, Netexec e searchsploit no laboratório, e CI com build em cache e scanning via Trivy. O que mudou no repositório de pentest lab, e o que ainda falta.</p>
+          <ul class="post-card__tags"><li>CyberSecurity</li><li>EthicalHacking</li><li>Pentest</li></ul>
+        </div>
+      </article>
     </div>
   </div>
 </section>
