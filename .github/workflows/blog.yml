@@ -141,6 +141,8 @@ jobs:
       group: deploy-ftp
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v4
+
       # Sem credencial configurada o job não falha: só avisa e sai. Assim o
       # repositório continua buildando normalmente antes de alguém criar os
       # secrets — e um fork nunca vê um workflow vermelho por isso.
