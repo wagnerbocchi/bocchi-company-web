@@ -279,6 +279,40 @@ jobs:
             mirror --reverse --verbose --no-perms $DELETE_FLAG 'site' '$REMOTE_DIR';
           "
 
+      - name: Conferir arquivos enviados por FTPS
+        if: steps.cred.outputs.ok == 'yes'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR || '/' }}
+          VERIFY_CERT: ${{ vars.FTP_VERIFY_CERT || 'true' }}
+        run: |
+          set -euo pipefail
+          mkdir -p readback/blog readback/.well-known
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate $VERIFY_CERT;
+            set cmd:fail-exit true;
+            set net:max-retries 3;
+            set net:timeout 20;
+            open -u '$FTP_USER' --env-password 'ftp://$FTP_HOST';
+            cd '$REMOTE_DIR';
+            get index.html -o readback/index.html;
+            get blog/index.html -o readback/blog/index.html;
+            get token.php -o readback/token.php;
+            get turnstile.php -o readback/turnstile.php;
+            get .htaccess -o readback/.htaccess;
+            get .well-known/security.txt -o readback/.well-known/security.txt;
+          "
+          for arquivo in index.html blog/index.html token.php turnstile.php .htaccess .well-known/security.txt; do
+            cmp "site/$arquivo" "readback/$arquivo" || {
+              echo "FALHOU: $arquivo difere do pacote publicado"; exit 1;
+            }
+            echo "  ok     $arquivo confere com o pacote"
+          done
+
       - name: Conferir o site no ar
         if: steps.cred.outputs.ok == 'yes'
         run: |
@@ -299,14 +333,23 @@ jobs:
           # conexão, timeout e 408/429/5xx; 403 não está na lista, então o
           # `--retry 3` que estava aqui nunca repetiu uma única vez.
           #
-          # Um check que mente sempre é pior que check nenhum: ensina a ignorar
-          # o vermelho, e aí o dia em que o deploy quebrar de verdade passa
-          # batido. Por isso o retry abaixo é real — e o veredito continua
-          # estrito: esgotadas as tentativas, reprova.
+          # O Bot Fight Mode desafia o IP do runner do GitHub. A Cloudflare
+          # identifica essa resposta com cf-mitigated: challenge. Ela não diz
+          # nada sobre o estado da origem; o passo anterior confere os arquivos
+          # no servidor por FTPS. Um 403 sem esse header continua sendo erro.
+          headers=$(mktemp)
+          trap 'rm -f "$headers"' EXIT
+          desafios=0
           verifica() {
             local url="$1" esperado="$2" code=000
             for _ in $(seq 1 12); do
-              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$url" || echo 000)
+              : > "$headers"
+              code=$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+              if grep -iq '^cf-mitigated: challenge' "$headers"; then
+                printf '  EDGE   %-46s desafio da Cloudflare\n' "$url"
+                desafios=$((desafios + 1))
+                return 0
+              fi
               if [ "$code" = "$esperado" ]; then
                 printf '  ok     %-46s %s\n' "$url" "$code"
                 return 0
@@ -345,16 +388,27 @@ jobs:
           # não derruba nada — por isso ninguém percebe sem uma verificação.
           destino=""
           for _ in $(seq 1 12); do
-            destino=$(curl -sS -o /dev/null -w '%{redirect_url}' --max-time 20 https://www.bocchi.company/sobre || echo '')
+            : > "$headers"
+            destino=$(curl -sS -D "$headers" -o /dev/null -w '%{redirect_url}' --max-time 20 https://www.bocchi.company/sobre || true)
+            if grep -iq '^cf-mitigated: challenge' "$headers"; then
+              desafios=$((desafios + 1))
+              break
+            fi
             [ "$destino" = "https://bocchi.company/sobre" ] && break
             sleep 5
           done
           if [ "$destino" = "https://bocchi.company/sobre" ]; then
             printf '  ok     %-46s 301\n' "www.bocchi.company/sobre"
+          elif grep -iq '^cf-mitigated: challenge' "$headers"; then
+            echo '  EDGE   www.bocchi.company/sobre: desafio da Cloudflare'
           else
             printf "  FALHOU %-46s foi para '%s'\n" "www.bocchi.company/sobre" "${destino:-nada}"
             falhas=1
           fi
 
           [ "$falhas" = "0" ] || { echo "verificação pós-deploy reprovou — veja as linhas FALHOU acima"; exit 1; }
-          echo "site no ar, .htaccess ativo e www redirecionando"
+          if [ "$desafios" -gt 0 ]; then
+            echo "::warning::$desafios rota(s) receberam desafio da Cloudflare no runner; arquivos conferidos por FTPS, mas disponibilidade pública requer verificação externa"
+          else
+            echo "site no ar, .htaccess ativo e www redirecionando"
+          fi
