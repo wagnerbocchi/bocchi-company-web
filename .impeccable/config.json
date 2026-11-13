@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "contato.html"
+        ],
+        "createdAt": "2026-11-13T15:52:49.171Z",
+        "reason": "Agent: the shared CSS defines .project-badge__dot, but contato.html does not render this element; the finding is not present on this page."
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "en/contact.html"
+        ],
+        "createdAt": "2026-11-13T15:52:53.089Z",
+        "reason": "Agent: the shared CSS defines .project-badge__dot, but en/contact.html does not render this element; the finding is not present on this page."
+      }
+    ]
+  }
+}
