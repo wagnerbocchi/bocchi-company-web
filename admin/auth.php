@@ -66,7 +66,7 @@ function finish(?string $token, ?string $error): never
 
 function bail(string $logMsg, string $userMsg): never
 {
-    error_log('[admin/auth] ' . $logMsg);
+    error_log('[admin/auth] ' . preg_replace('/[\x00-\x1F\x7F]/', ' ', $logMsg));
     finish(null, $userMsg);
 }
 
@@ -126,7 +126,7 @@ function http_request(string $url, ?array $post, array $headers): ?string
         $body = curl_exec($ch);
         $err  = curl_error($ch);
         curl_close($ch);
-        if ($body === false) { error_log('[admin/auth] curl: ' . $err); return null; }
+        if ($body === false) { error_log('[admin/auth] curl: ' . preg_replace('/[\x00-\x1F\x7F]/', ' ', $err)); return null; }
         return (string) $body;
     }
     $ctx = stream_context_create(['http' => [

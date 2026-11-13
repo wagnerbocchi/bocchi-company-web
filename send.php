@@ -9,10 +9,9 @@
  *
  * Barreiras contra spam, na ordem em que rodam (detalhes em antispam.php):
  *   honeypot → mesma origem → assinatura do token → validação dos campos →
- *   limite por cliente → gasto do nonce → pontuação do conteúdo → teto global.
- * A ordem não é estética: tudo que grava em disco ou custa rede fica DEPOIS do
- * limite por cliente, e o teto global fica depois do filtro de conteúdo para
- * que spam descartado não consuma a cota de quem tem algo a dizer.
+ *   Turnstile → limite por cliente → gasto do nonce → pontuação do conteúdo.
+ * A ordem impede que requisições sem prova válida criem arquivos de estado.
+ * O Turnstile dificulta que IPs distribuídos esgotem o formulário.
  * O envio sem JavaScript deixa de funcionar por causa do token: a página de
  * contato avisa disso em <noscript> e oferece o e-mail direto.
  *
@@ -72,12 +71,14 @@ $t = $lang === 'en'
         'fields' => 'Please check the highlighted fields.',
         'fail'   => 'We could not send your message. Please email us directly.',
         'token'  => 'We could not validate this submission. Reload the page and try again — the form needs JavaScript — or email contato@bocchi.company directly.',
+        'challenge' => 'The security check expired or failed. Please wait a moment and try again.',
       )
     : array(
         'method' => 'Método não permitido.',
         'fields' => 'Revise os campos destacados.',
         'fail'   => 'Não conseguimos enviar. Tente o e-mail direto.',
         'token'  => 'Não foi possível validar o envio. Recarregue a página e tente de novo — o formulário precisa de JavaScript — ou escreva direto para contato@bocchi.company.',
+        'challenge' => 'A verificação de segurança expirou ou falhou. Aguarde um momento e tente novamente.',
       );
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -160,6 +161,17 @@ if (!$valid) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 422, $t['fields']);
 }
 
+// Turnstile antes de qualquer escrita no disco: um robô com token de envio
+// válido mas sem prova humana não pode criar contadores ou nonces por IP.
+require_once __DIR__ . '/turnstile.php';
+$challengeToken = isset($_POST['cf-turnstile-response']) ? $_POST['cf-turnstile-response'] : '';
+$challenge = bocchi_turnstile_verify($challengeToken, isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0');
+if ($challenge === null) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 503, $t['fail']);
+}
+if ($challenge === false) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['challenge']);
+}
 // Limite por cliente: 5 envios/hora (IPv4 por endereço, IPv6 por /64).
 // REMOTE_ADDR de propósito: X-Forwarded-For é controlado pelo cliente e
 // tornaria o limite trivial de burlar. (A hospedagem restaura o IP real do
@@ -170,14 +182,33 @@ $rateTooMuch = $lang === 'en'
     ? 'Too many messages from your network. Please try again later.'
     : 'Muitas mensagens da sua rede. Tente novamente mais tarde.';
 
-if (!bocchi_rate_ok(bocchi_rate_key($clientIp), 5, 3600)) {
+$clientRate = bocchi_rate_ok(bocchi_rate_key($clientIp), 5, 3600);
+if ($clientRate === null) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 503, $t['fail']);
+}
+if ($clientRate === false) {
     respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
+}
+
+// O Siteverify pode aceitar um replay concorrente antes de propagar o gasto
+// do token; a criação atômica local fecha essa janela. O limite por cliente
+// já cobrado acima impede que esta escrita cresça sem limite por IP.
+$challengeClaim = bocchi_nonce_claim('turnstile:' . hash('sha256', $challengeToken), $TOKEN_MAX);
+if ($challengeClaim === null) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 503, $t['fail']);
+}
+if ($challengeClaim === false) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['challenge']);
 }
 
 // Só agora o nonce é gasto: a partir daqui cada tentativa custa uma das 5
 // vagas horárias do cliente, então a gravação em disco tem teto.
-if (!bocchi_nonce_claim($nonce, $TOKEN_MAX)) {
-    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token'], true);
+$claimed = bocchi_nonce_claim($nonce, $TOKEN_MAX);
+if ($claimed === null) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 503, $t['fail']);
+}
+if ($claimed === false) {
+    respond(false, $lang, $isAjax, $RETURN_PAGES, 403, $t['token']);
 }
 
 // Última camada: o conteúdo. Pega o que passou pelas outras — robô que roda
@@ -196,17 +227,9 @@ if ($spam['score'] >= $SPAM_LIMIT && $spam['strong']) {
     error_log(sprintf(
         '[contato] descartado (score %d: %s) ip=%s email=%s msg=%s',
         $spam['score'], implode('; ', $spam['why']), $clientIp, $email,
-        mb_substr($message, 0, 160)
+        preg_replace('/[\x00-\x1F\x7F]/', ' ', mb_substr($message, 0, 160))
     ));
     respond(true, $lang, $isAjax, $RETURN_PAGES, 200, '');
-}
-
-// Teto global do site: 60/hora. Fica DEPOIS do filtro de conteúdo de
-// propósito — spam descartado não deve consumir a cota, senão um robô manda
-// 60 mensagens ilegíveis por hora e derruba o formulário para todo mundo,
-// que é justamente o estrago que este limite deveria evitar.
-if (!bocchi_rate_ok('global', 60, 3600)) {
-    respond(false, $lang, $isAjax, $RETURN_PAGES, 429, $rateTooMuch);
 }
 
 $topicLabel = $topic !== '' ? $topic : ($lang === 'en' ? 'Not specified' : 'Não especificado');

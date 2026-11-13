@@ -176,7 +176,7 @@
 
         <p class="form-legend">* required fields</p>
         <noscript>
-          <p class="form-note">Sending through the form requires JavaScript — that is what separates people from bots without asking you to solve a captcha. With it disabled, email us directly at <a href="mailto:contato@bocchi.company">contato@bocchi.company</a>.</p>
+          <p class="form-note">Sending through the form requires JavaScript to verify the message. With it disabled, email us directly at <a href="mailto:contato@bocchi.company">contato@bocchi.company</a>.</p>
         </noscript>
 
         <div class="form-grid">
@@ -207,6 +207,8 @@
           <label for="cf-message">Message *</label>
           <textarea id="cf-message" name="message" rows="5" required maxlength="4000" aria-required="true" spellcheck="true" placeholder="Tell us a bit about your scenario, assets, and goal."></textarea>
         </div>
+
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAF_spAp89IYS7cPg" data-action="contact" data-theme="dark" data-size="flexible"></div>
 
         <div class="form-foot">
           <button type="submit" class="btn btn--primary btn--lg" data-magnetic>Send message</button>
@@ -264,6 +266,7 @@
   </div>
 </footer>
 
-<script src="../assets/js/main.js?v=8" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="../assets/js/main.js?v=9" defer></script>
 </body>
 </html>
