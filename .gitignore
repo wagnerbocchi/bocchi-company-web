@@ -1,7 +1,15 @@
 # Credenciais — NUNCA versionar (formulário de contato e painel do blog)
 bocchi-smtp.php
 bocchi-oauth.php
+bocchi-turnstile.php
 *.secret.php
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+.salt
+.bocchi-state/
 
 # Dependências / build
 /vendor/
