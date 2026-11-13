@@ -50,9 +50,17 @@ Secrets*:
 | `FTP_HOST` | ver "Qual host usar" abaixo — a escolha tem consequência |
 | `FTP_USER` | o usuário da conta dedicada (ex.: `u323617778.github`) |
 | `FTP_PASSWORD` | a senha dessa conta |
+| `ORIGIN_GATE_SECRET` | 64 caracteres hexadecimais minúsculos; mesmo valor da regra de cabeçalho da Cloudflare |
 
-Sem os três, o job **não falha**: ele avisa e sai, e o `deploy.zip` continua
-disponível como artefato para upload manual.
+Sem as três credenciais de FTP, o job avisa e sai. Com FTP configurado, a
+ausência de `ORIGIN_GATE_SECRET` interrompe a publicação antes do upload.
+
+Na Cloudflare, crie uma **Request Header Transform Rule** para os hosts
+`bocchi.company` e `www.bocchi.company`: **Set static** do cabeçalho
+`X-Bocchi-Origin` com o mesmo valor de `ORIGIN_GATE_SECRET`. A Cloudflare
+sobrescreve esse cabeçalho nas requisições encaminhadas. O job insere a
+comparação no `.htaccess` somente no runner, depois de conferir o destino FTPS;
+o valor não entra no Git nem no `deploy.zip` armazenado como artefato.
 
 #### Qual host usar
 
@@ -91,11 +99,9 @@ enxerga como raiz. Se a conta que você usar não for presa, o job aborta
 explicando, e aí basta pôr o caminho completo
 (`/home/uXXXXXXX/domains/bocchi.company/public_html`) nessa variável.
 
-`FTP_DELETE_STALE` vem desligado porque só você sabe se há algo dentro do
-`public_html` que não vem deste repositório (um `.well-known/`, um arquivo
-solto). Com ele desligado, um post despublicado continua acessível pela URL
-antiga até você apagar o arquivo à mão. Antes de ligar, confira o conteúdo do
-`public_html` pelo File Manager.
+`FTP_DELETE_STALE` vem ligado: arquivos retirados do repositório, como posts
+despublicados, também saem do servidor. Só defina `false` se houver arquivos
+que precisam permanecer no `public_html` fora deste repositório.
 
 ### O que o job garante
 
@@ -116,14 +122,17 @@ antiga até você apagar o arquivo à mão. Antes de ligar, confira o conteúdo 
   exatamente o lugar perigoso — mesmo nome, significados opostos.
 - **Confere o pacote antes de subir** (tem `.htaccess`, tem `index.html`, não
   tem `bocchi-*.php` nem `.env`/`.key`/`.pem`).
-- **Confere o site depois de subir**: `/`, `/blog/` e `/token.php` precisam
-  responder 200, e `/antispam.php` precisa responder 403 — se o `.htaccess` não
-  subiu, o job fica vermelho em vez de fingir sucesso.
+- **Confere os arquivos enviados por FTPS** contra o pacote já com a guarda
+  injetada. A checagem pública também testa as rotas; quando o Bot Fight Mode
+  desafia o runner, ela registra a limitação sem confundir o desafio com uma
+  falha da origem. Verifique a disponibilidade pública de outro acesso.
 
 ### Se o deploy automático falhar
 
-O `deploy.zip` continua sendo publicado como artefato em toda execução. Caia
-para o procedimento manual abaixo e investigue depois.
+O `deploy.zip` continua sendo publicado como artefato, mas **não contém a
+guarda de origem**. Tente primeiro `workflow_dispatch` no GitHub Actions. Se
+for necessário publicar manualmente, injete a guarda no `.htaccess` antes do
+upload, seguindo o passo abaixo.
 
 ---
 
@@ -145,8 +154,20 @@ npm run package        # gera dist/ e deploy.zip
 
 ### 2. Suba e extraia
 
+Com o repositório local e o valor de `ORIGIN_GATE_SECRET` em mãos, prepare um
+zip protegido. O valor é lido sem eco e não aparece na linha de comando:
+
+```bash
+read -rs ORIGIN_GATE_SECRET
+export ORIGIN_GATE_SECRET
+unzip -q deploy.zip -d site
+node tools/inject-origin-gate.mjs site/.htaccess
+(cd site && zip -qr ../deploy-protected.zip .)
+unset ORIGIN_GATE_SECRET
+```
+
 No File Manager, entre em `public_html`, use **Upload** para enviar o
-`deploy.zip` e depois **Extract** ali mesmo. Apague o zip em seguida.
+`deploy-protected.zip` e depois **Extract** ali mesmo. Apague o zip em seguida.
 
 > **Suba o `.zip`, não a pasta.** Arrastar pasta pelo navegador costuma deixar
 > os arquivos que começam com ponto para trás — e o `.htaccess` é o que faz as

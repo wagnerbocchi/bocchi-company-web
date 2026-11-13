@@ -193,6 +193,7 @@ jobs:
           # O lftp lê a senha desta variável com --env-password. Passar por
           # linha de comando a deixaria visível no /proc e em qualquer trace.
           LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          ORIGIN_GATE_SECRET: ${{ secrets.ORIGIN_GATE_SECRET }}
           # "/" porque a conta de FTP dedicada é presa (chroot) ao próprio
           # public_html: ao logar, ela JÁ está lá dentro, e um "/public_html"
           # apontaria para um subdiretório que não existe. Se a conta usada não
@@ -259,6 +260,12 @@ jobs:
             exit 1
           fi
           echo "destino conferido: $REMOTE_DIR é a raiz do site"
+
+          # O IP da origem apareceu no histórico público. A Cloudflare coloca
+          # X-Bocchi-Origin nas requisições encaminhadas; uma requisição direta
+          # não conhece o valor. Injete só no runner, depois de validar o
+          # destino, para nunca versionar ou guardar a chave no artefato zip.
+          node tools/inject-origin-gate.mjs site/.htaccess
 
           DELETE_FLAG=""
           if [ "$DELETE_STALE" = "true" ]; then
