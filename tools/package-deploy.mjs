@@ -30,7 +30,7 @@ const NO_ZIP = process.argv.includes('--no-zip');
 const DIRS = ['assets', 'en', 'blog', 'admin', '.well-known'];
 
 /** Arquivos avulsos da raiz. Padrões glob simples só de sufixo/nome exato. */
-const FILES = ['.htaccess', 'robots.txt', 'sitemap.xml', 'feed.xml', 'send.php', 'smtp.php', 'token.php', 'antispam.php'];
+const FILES = ['.htaccess', 'robots.txt', 'sitemap.xml', 'feed.xml', 'send.php', 'smtp.php', 'token.php', 'antispam.php', 'turnstile.php'];
 const FILE_PATTERNS = [/^[a-z0-9-]+\.html$/i];   // index.html, sobre.html, 404.html…
 
 /**
@@ -39,7 +39,7 @@ const FILE_PATTERNS = [/^[a-z0-9-]+\.html$/i];   // index.html, sobre.html, 404.
  * por engano, o empacotamento falha em vez de publicar a credencial.
  */
 const NUNCA = [
-  /(^|\/)bocchi-(smtp|oauth)[^/]*\.php$/i,   // credenciais reais e os modelos
+  /(^|\/)bocchi-(smtp|oauth|turnstile)[^/]*\.php$/i,   // credenciais reais e os modelos
   /(^|\/)\.git(\/|$)/,
   /(^|\/)node_modules(\/|$)/,
   /(^|\/)\.env/i,
@@ -102,7 +102,7 @@ for (const dir of DIRS) {
 // send.php agora depende de antispam.php e token.php: um pacote sem eles sobe
 // com o formulário respondendo erro em todo envio.
 for (const obrigatorio of ['.htaccess', 'index.html', 'admin/.htaccess', 'assets/css/style.css',
-                           'send.php', 'antispam.php', 'token.php', '.well-known/security.txt']) {
+                           'send.php', 'antispam.php', 'token.php', 'turnstile.php', '.well-known/security.txt']) {
   if (!fs.existsSync(path.join(DIST, obrigatorio))) problemas.push(`faltando no pacote: ${obrigatorio}`);
 }
 
@@ -148,4 +148,4 @@ if (!NO_ZIP) {
 
 console.log(`dist/: ${n} arquivo(s), ${(tamanho / 1024 / 1024).toFixed(1)} MB`);
 console.log('\nO conteúdo de dist/ (ou do deploy.zip) vai DENTRO do public_html.');
-console.log('O bocchi-smtp.php e o bocchi-oauth.php ficam UM NÍVEL ACIMA — não entram aqui, de propósito.');
+console.log('Os bocchi-smtp.php, bocchi-oauth.php e bocchi-turnstile.php ficam UM NÍVEL ACIMA — não entram aqui, de propósito.');

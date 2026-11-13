@@ -3,7 +3,7 @@
  * Bocchi Company — camada anti-abuso do formulário de contato.
  * Reúne o que o send.php usa para separar gente de robô:
  *
- *   1. rate limit por cliente e global (contadores em disco);
+ *   1. rate limit por cliente (contadores em disco);
  *   2. token de envio assinado, emitido pelo token.php e de uso único;
  *   3. pontuação de conteúdo (heurísticas de spam clássico).
  *
@@ -34,9 +34,16 @@ if (!function_exists('bocchi_rate_dir')) {
 
         foreach (array(dirname(__DIR__) . '/.bocchi-state', sys_get_temp_dir() . '/bocchi_rl') as $cand) {
             if (!is_dir($cand)) { @mkdir($cand, 0700, true); }
-            if (is_dir($cand) && is_writable($cand)) { return $dir = $cand; }
+            clearstatcache(true, $cand);
+            $mode = @fileperms($cand);
+            if (!is_link($cand) && is_dir($cand) && is_writable($cand)
+                && @fileowner($cand) === getmyuid()
+                && $mode !== false && ($mode & 0077) === 0) {
+                return $dir = $cand;
+            }
         }
-        return $dir = sys_get_temp_dir() . '/bocchi_rl';
+        error_log('[contato] diretório de estado indisponível ou inseguro');
+        return $dir = false;
     }
 
     /**
@@ -45,25 +52,53 @@ if (!function_exists('bocchi_rate_dir')) {
      * contador seria sha256(IP) puro — como o espaço IPv4 é enumerável,
      * qualquer um que consiga listar o diretório confirmaria quais IPs
      * contataram o site. É gerado uma vez e fica só no disco (nunca no
-     * repositório). Se não der para persistir, cai para um valor por processo:
-     * o limite continua funcionando, só não sobrevive entre requisições.
+     * repositório). Sem um segredo privado persistente, o formulário falha
+     * fechado: um fallback previsível permitiria forjar todos os tokens.
      */
     function bocchi_rate_salt() {
         static $salt = null;
         if ($salt !== null) { return $salt; }
 
-        // Fallback determinístico, usado só se o filesystem não colaborar. Não é
-        // secreto, mas nesse cenário os contadores também não persistem — o que
-        // importa é que todos os processos cheguem ao MESMO valor, senão cada um
-        // contaria em um arquivo diferente e o limite deixaria de valer.
-        $fallback = hash('sha256', 'bocchi-rl|' . __FILE__);
-        $path = bocchi_rate_dir() . '/.salt';
+        $dir = bocchi_rate_dir();
+        if ($dir === false) { return $salt = false; }
+        $path = $dir . '/.salt';
+
+        clearstatcache(true, $path);
+        $alreadyExists = file_exists($path) || is_link($path);
+        if ($alreadyExists) {
+            $mode = @fileperms($path);
+            if (is_link($path) || !is_file($path)
+                || @fileowner($path) !== getmyuid()
+                || $mode === false || ($mode & 0077) !== 0) {
+                error_log('[contato] segredo de estado inseguro');
+                return $salt = false;
+            }
+        }
 
         // "c+" cria sem truncar; o flock serializa a criação. Sem isso, requisições
         // simultâneas em um diretório novo geram salts diferentes entre si.
+        $oldUmask = umask(0077);
         $fh = @fopen($path, 'c+');
-        if (!$fh) { return $salt = $fallback; }
-        if (!@flock($fh, LOCK_EX)) { fclose($fh); return $salt = $fallback; }
+        umask($oldUmask);
+        if (!$fh) { return $salt = false; }
+        if (!@flock($fh, LOCK_EX)) { fclose($fh); return $salt = false; }
+
+        // O diretório 0700 impede acesso de outros usuários durante a criação.
+        // Ainda assim fixa 0600 antes da leitura, inclusive em runtimes cuja
+        // implementação de fopen não respeita umask.
+        if (!$alreadyExists && !@chmod($path, 0600)) {
+            flock($fh, LOCK_UN);
+            fclose($fh);
+            return $salt = false;
+        }
+
+        $stat = fstat($fh);
+        if (!$stat || $stat['uid'] !== getmyuid() || ($stat['mode'] & 0077) !== 0 || $stat['nlink'] !== 1) {
+            flock($fh, LOCK_UN);
+            fclose($fh);
+            error_log('[contato] segredo de estado inseguro');
+            return $salt = false;
+        }
 
         $existing = stream_get_contents($fh);
         if (is_string($existing) && strlen($existing) >= 32) {
@@ -73,21 +108,45 @@ if (!function_exists('bocchi_rate_dir')) {
         }
 
         try {
-            $salt = bin2hex(random_bytes(32));
+            $newSalt = bin2hex(random_bytes(32));
         } catch (Exception $e) {
-            $salt = $fallback;
+            flock($fh, LOCK_UN);
+            fclose($fh);
+            return $salt = false;
         }
-        ftruncate($fh, 0);
-        rewind($fh);
-        fwrite($fh, $salt);
-        fflush($fh);
+        if (!ftruncate($fh, 0) || rewind($fh) === false
+            || fwrite($fh, $newSalt) !== strlen($newSalt) || !fflush($fh)) {
+            flock($fh, LOCK_UN);
+            fclose($fh);
+            return $salt = false;
+        }
         flock($fh, LOCK_UN);
         fclose($fh);
         @chmod($path, 0600);
-        return $salt;
+        return $salt = $newSalt;
     }
 
     // ===================== RATE LIMIT =====================
+
+    /** Serializa a coleta com a abertura/escrita dos contadores. */
+    function bocchi_gc_lock($dir, $mode) {
+        $path = $dir . '/.gc.lock';
+        if (is_link($path)) { return false; }
+        $oldUmask = umask(0077);
+        $fh = @fopen($path, 'c+');
+        umask($oldUmask);
+        if (!$fh) { return false; }
+        if (!@chmod($path, 0600) || !@flock($fh, $mode)) {
+            fclose($fh);
+            return false;
+        }
+        return $fh;
+    }
+
+    function bocchi_gc_unlock($fh) {
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
 
     /**
      * Chave de agrupamento do rate limit.
@@ -113,19 +172,27 @@ if (!function_exists('bocchi_rate_dir')) {
      * Leitura e escrita acontecem sob o MESMO flock — sem isso, requisições
      * simultâneas leem o mesmo estado e todas passam.
      *
-     * Falha aberta (retorna true) se o filesystem não colaborar: um formulário
-     * de contato quebrado custa mais que um limite não aplicado.
+     * Retorna null em falha de estado para não liberar envios sem limite.
      */
     function bocchi_rate_ok($key, $max, $window) {
-        $file = bocchi_rate_dir() . '/' . hash_hmac('sha256', $key, bocchi_rate_salt());
+        $dir = bocchi_rate_dir();
+        $salt = bocchi_rate_salt();
+        if ($dir === false || $salt === false) { return null; }
+        $guard = bocchi_gc_lock($dir, LOCK_SH);
+        if ($guard === false) { return null; }
+        $file = $dir . '/' . hash_hmac('sha256', $key, $salt);
+        $oldUmask = umask(0077);
         $fh = @fopen($file, 'c+');
-        if (!$fh) { return true; }
-        if (!@flock($fh, LOCK_EX)) { fclose($fh); return true; }
+        umask($oldUmask);
+        if (!$fh) { bocchi_gc_unlock($guard); return null; }
+        if (!@flock($fh, LOCK_EX)) { fclose($fh); bocchi_gc_unlock($guard); return null; }
 
         $now  = time();
         $hits = array();
         $raw  = stream_get_contents($fh);
+        if ($raw === false) { flock($fh, LOCK_UN); fclose($fh); bocchi_gc_unlock($guard); return null; }
         $data = json_decode((string) $raw, true);
+        if ($raw !== '' && !is_array($data)) { flock($fh, LOCK_UN); fclose($fh); bocchi_gc_unlock($guard); return null; }
         if (is_array($data)) {
             foreach ($data as $t) {
                 if (is_int($t) && $t > $now - $window) { $hits[] = $t; }
@@ -136,14 +203,24 @@ if (!function_exists('bocchi_rate_dir')) {
         if ($ok) {
             $hits[] = $now;
             if (count($hits) > $max) { $hits = array_slice($hits, -$max); }
-            ftruncate($fh, 0);
-            rewind($fh);
-            fwrite($fh, json_encode($hits));
-            fflush($fh);
+            if (!ftruncate($fh, 0) || rewind($fh) === false) {
+                flock($fh, LOCK_UN);
+                fclose($fh);
+                bocchi_gc_unlock($guard);
+                return null;
+            }
+            $encoded = json_encode($hits);
+            if (fwrite($fh, $encoded) !== strlen($encoded) || !fflush($fh)) {
+                flock($fh, LOCK_UN);
+                fclose($fh);
+                bocchi_gc_unlock($guard);
+                return null;
+            }
         }
 
         flock($fh, LOCK_UN);
         fclose($fh);
+        bocchi_gc_unlock($guard);
         @chmod($file, 0600);
         return $ok;
     }
@@ -153,7 +230,7 @@ if (!function_exists('bocchi_rate_dir')) {
     // O grosso do spam de formulário não abre a página: o robô dá POST
     // direto no endpoint, com todos os campos preenchidos e o honeypot
     // vazio — exatamente o que passou por aqui. O token corta essa classe
-    // inteira sem pedir captcha a ninguém: só é emitido pelo token.php, que
+    // inteira sem pedir trabalho extra a ninguém: só é emitido pelo token.php, que
     // o JS da página busca no carregamento.
     //
     // Não vincula o token ao IP de propósito. Em rede móvel o endereço muda
@@ -166,11 +243,14 @@ if (!function_exists('bocchi_rate_dir')) {
      * o nome de um arquivo de contador não ganha nada para forjar token.
      */
     function bocchi_token_key() {
-        return hash_hmac('sha256', 'form-token-v1', bocchi_rate_salt(), true);
+        $salt = bocchi_rate_salt();
+        return $salt === false ? false : hash_hmac('sha256', 'form-token-v1', $salt, true);
     }
 
     /** Emite um token novo. Retorna '' se não houver fonte de aleatoriedade. */
     function bocchi_token_issue() {
+        $key = bocchi_token_key();
+        if ($key === false) { return ''; }
         try {
             $nonce = bin2hex(random_bytes(12));
         } catch (Exception $e) {
@@ -178,7 +258,7 @@ if (!function_exists('bocchi_rate_dir')) {
             return '';
         }
         $ts = time();
-        return 'v1.' . $ts . '.' . $nonce . '.' . hash_hmac('sha256', $ts . '.' . $nonce, bocchi_token_key());
+        return 'v1.' . $ts . '.' . $nonce . '.' . hash_hmac('sha256', $ts . '.' . $nonce, $key);
     }
 
     /**
@@ -196,7 +276,9 @@ if (!function_exists('bocchi_rate_dir')) {
 
         if (!ctype_digit($ts) || strlen($nonce) !== 24 || !ctype_xdigit($nonce)) { return false; }
 
-        $expected = hash_hmac('sha256', $ts . '.' . $nonce, bocchi_token_key());
+        $key = bocchi_token_key();
+        if ($key === false) { return false; }
+        $expected = hash_hmac('sha256', $ts . '.' . $nonce, $key);
         if (!hash_equals($expected, (string) $sig)) { return false; }
 
         // Tolerância negativa pequena: o relógio é o mesmo em quem emite e em
@@ -215,13 +297,15 @@ if (!function_exists('bocchi_rate_dir')) {
      */
     function bocchi_nonce_claim($nonce, $ttl) {
         bocchi_nonce_gc($ttl);
-        $file = bocchi_rate_dir() . '/n_' . hash_hmac('sha256', 'nonce:' . $nonce, bocchi_rate_salt());
+        $dir = bocchi_rate_dir();
+        $salt = bocchi_rate_salt();
+        if ($dir === false || $salt === false) { return null; }
+        $file = $dir . '/n_' . hash_hmac('sha256', 'nonce:' . $nonce, $salt);
+        $oldUmask = umask(0077);
         $fh = @fopen($file, 'x');
+        umask($oldUmask);
         if ($fh === false) {
-            // Distinguir "já usado" de "disco indisponível": no segundo caso
-            // falha aberta, pelo mesmo motivo do rate limit — formulário
-            // quebrado custa mais que um token reaproveitado.
-            return !file_exists($file);
+            return file_exists($file) ? false : null;
         }
         fclose($fh);
         @chmod($file, 0600);
@@ -229,22 +313,32 @@ if (!function_exists('bocchi_rate_dir')) {
     }
 
     /**
-     * Limpa nonces vencidos. Roda por amostragem (1 em 50 envios) porque
+     * Limpa nonces e contadores vencidos. Roda por amostragem (1 em 50 envios) porque
      * varrer o diretório a cada requisição custaria mais que o próprio envio.
      */
     function bocchi_nonce_gc($ttl) {
         if (mt_rand(1, 50) !== 1) { return; }
         $dir = bocchi_rate_dir();
+        if ($dir === false) { return; }
+        $guard = bocchi_gc_lock($dir, LOCK_EX);
+        if ($guard === false) { return; }
         $dh = @opendir($dir);
-        if (!$dh) { return; }
-        $cut = time() - $ttl;
+        if (!$dh) { bocchi_gc_unlock($guard); return; }
+        $nonceCut = time() - $ttl;
+        $rateCut = time() - 3600;
         while (($entry = readdir($dh)) !== false) {
-            if (strpos($entry, 'n_') !== 0) { continue; }
+            $isNonce = (bool) preg_match('/^n_[a-f0-9]{64}$/D', $entry);
+            $isRate = (bool) preg_match('/^[a-f0-9]{64}$/D', $entry);
+            if (!$isNonce && !$isRate) { continue; }
             $path = $dir . '/' . $entry;
+            if (is_link($path) || !is_file($path)) { continue; }
             $mtime = @filemtime($path);
-            if ($mtime !== false && $mtime < $cut) { @unlink($path); }
+            if ($mtime !== false && $mtime < ($isNonce ? $nonceCut : $rateCut)) {
+                @unlink($path);
+            }
         }
         closedir($dh);
+        bocchi_gc_unlock($guard);
     }
 
     // ===================== PONTUAÇÃO DE CONTEÚDO =====================

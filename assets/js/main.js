@@ -103,7 +103,7 @@
     // Token de envio: o send.php só aceita POST que traga um, e quem emite é
     // o token.php. Robô que dispara POST direto no endpoint — como chega
     // quase todo spam de formulário — não passa, e ninguém precisa resolver
-    // captcha. Pedimos um no carregamento para o envio sair sem ida extra.
+    // etapa extra no carregamento. Pedimos um no carregamento para o envio sair rápido.
     const tokenUrl = form.action.replace(/send\.php(?=$|[?#])/, 'token.php');
     let token = '';
     const fetchToken = () => fetch(tokenUrl, { headers: { 'Accept': 'application/json' } })
@@ -122,6 +122,12 @@
       e.preventDefault();
       if (!validate()) {
         setStatus(isPT ? 'Revise os campos destacados.' : 'Please check the highlighted fields.', false);
+        return;
+      }
+      const challenge = form.elements['cf-turnstile-response'];
+      if (!challenge || !challenge.value) {
+        setStatus(isPT ? 'Aguarde a verificação de segurança e tente novamente.' : 'Wait for the security check and try again.', false);
+        if (window.turnstile) window.turnstile.reset();
         return;
       }
       const btn = form.querySelector('[type="submit"]');
@@ -160,6 +166,7 @@
         .finally(() => {
           token = '';        // gasto no servidor, com sucesso ou não
           fetchToken();      // deixa outro pronto, caso a pessoa escreva de novo
+          if (window.turnstile) window.turnstile.reset();
           if (btn) { btn.disabled = false; btn.textContent = label; }
         });
     });

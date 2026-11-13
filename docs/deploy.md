@@ -11,13 +11,15 @@ preciso.
 ├── public_html/              ← o site vive AQUI dentro
 ├── bocchi-smtp.php           ← credenciais do formulário de contato
 ├── bocchi-oauth.php          ← credenciais do painel do blog  (você cria)
+├── bocchi-turnstile.php      ← chave secreta do formulário (modo 0600)
+├── .bocchi-state/           ← tokens e limites do formulário (modo 0700)
 └── DO_NOT_UPLOAD_HERE
 ```
 
-Os dois `bocchi-*.php` ficam **fora** do `public_html` de propósito: nenhuma URL
+Os três `bocchi-*.php` ficam **fora** do `public_html` de propósito: nenhuma URL
 os alcança, mesmo que um dia o PHP pare de executar e o servidor passe a
 entregar `.php` como texto. É por isso que eles não entram no pacote de deploy —
-e por isso o `bocchi-oauth.php` vai ao lado do `bocchi-smtp.php` que já está lá,
+e por isso o `bocchi-oauth.php` e o `bocchi-turnstile.php` vão ao lado do `bocchi-smtp.php` que já está lá,
 não dentro do site.
 
 ---
@@ -35,7 +37,7 @@ manual: o post fica no ar em um ou dois minutos.
 apontada para `public_html` e **só** para ela.
 
 > Não use a conta de FTP principal. Ela alcança a raiz da conta, onde moram o
-> `bocchi-smtp.php`, o `bocchi-oauth.php` e o `.bocchi-state`. Uma conta
+> `bocchi-smtp.php`, o `bocchi-oauth.php`, o `bocchi-turnstile.php` e o `.bocchi-state`. Uma conta
 > limitada ao `public_html` faz com que o pior caso de um vazamento da
 > credencial seja o conteúdo público do site — que já é público — em vez das
 > credenciais de e-mail e do painel.
@@ -68,8 +70,8 @@ Em ordem de preferência:
    hPanel em *Plano de hospedagem*). É o único que costuma casar com o
    certificado do FTP, então dá para manter a verificação ligada, e não liga o
    seu domínio a IP nenhum publicamente.
-2. **O IP direto** (`ftp://212.85.6.57` no painel → use só `212.85.6.57`). Fica
-   dentro de um secret, então não é publicado. Em compensação **nenhum
+2. **O IP direto** (`ftp://IP_DA_ORIGEM` no painel → use só `IP_DA_ORIGEM`).
+   Guarde o valor apenas no secret; não o coloque no repositório. Em compensação **nenhum
    certificado casa com um IP**: o deploy vai falhar na verificação, e aí é
    preciso criar a variável `FTP_VERIFY_CERT=false` — uma decisão consciente,
    que mantém o canal cifrado mas abre mão de saber com quem se está falando.
@@ -81,7 +83,7 @@ Em ordem de preferência:
 | --- | --- | --- |
 | `FTP_REMOTE_DIR` | `/` | onde publicar, se a conta não for presa ao `public_html` |
 | `FTP_VERIFY_CERT` | `true` | `false` só se o `FTP_HOST` for um IP |
-| `FTP_DELETE_STALE` | `false` | `true` apaga no servidor o que sumiu do repositório |
+| `FTP_DELETE_STALE` | `true` | `false` preserva no servidor arquivos fora do repositório; use só quando houver um motivo documentado |
 
 O padrão de `FTP_REMOTE_DIR` é `/` porque a conta dedicada é **presa** ao
 diretório configurado: ao logar, ela já está dentro do `public_html` e o
@@ -107,7 +109,7 @@ antiga até você apagar o arquivo à mão. Antes de ligar, confira o conteúdo 
   abortar um upload pela metade.
 - **Recusa destino suspeito, por conteúdo e não por nome.** Antes de enviar, o
   job lista o diretório de destino: se achar `bocchi-smtp.php`,
-  `bocchi-oauth.php`, `.bocchi-state`, `domains` ou `public_html` ali dentro,
+  `bocchi-oauth.php`, `bocchi-turnstile.php`, `.bocchi-state`, `domains` ou `public_html` ali dentro,
   ele está na raiz da conta e aborta; se não achar `index.html`, não é a raiz do
   site e também aborta. Conferir pelo nome do caminho não funcionaria: a conta
   presa enxerga o `public_html` como `/`, e um `/` de conta não presa é
@@ -161,6 +163,7 @@ No File Manager, entre em `public_html`, use **Upload** para enviar o
 | `bocchi.company/blog/` | listagem do blog |
 | `bocchi.company/smtp.php` | 403 |
 | `bocchi.company/antispam.php` | 403 |
+| `bocchi.company/turnstile.php` | 403 |
 | `bocchi.company/token.php` | JSON com `"ok":true` |
 | `bocchi.company/naoexiste` | página 404 do site |
 
@@ -171,7 +174,7 @@ Se `/sobre` der 404 mas `/sobre.html` funcionar, o `.htaccess` não subiu ou o
 
 ## Anti-spam do formulário de contato
 
-Quatro barreiras, do mais barato para o mais caro (código e motivos em
+Cinco barreiras, do mais barato para o mais caro (código e motivos em
 `antispam.php`):
 
 | Barreira | O que corta |
@@ -179,13 +182,25 @@ Quatro barreiras, do mais barato para o mais caro (código e motivos em
 | Honeypot (`website`) | Robô que preenche todo campo que encontra |
 | Mesma origem | POST disparado de fora do site |
 | **Token de envio** | POST direto no `send.php`, sem abrir a página — é assim que chega quase todo spam de formulário |
+| **Turnstile** | Automação distribuída que obtém tokens e tenta esgotar o formulário |
 | Pontuação do conteúdo | O que sobrou: texto ilegível, link plantado, alfabeto que o site não atende, e-mail sem MX |
 
-Mais o rate limit que já existia: 5 envios/hora por cliente, 60/hora no site.
+Mais o rate limit por cliente: 5 tentativas/hora por IP (IPv6 por /64).
+O antigo teto compartilhado de 60/hora foi removido porque um grupo de IPs
+podia esgotá-lo e impedir contatos legítimos. O Turnstile valida cada envio
+no servidor, inclusive quando o POST chega direto ao IP de origem.
 
 O token é emitido pelo `token.php`, que o JavaScript da página busca no
 carregamento — por isso `token.php` e `antispam.php` **precisam** subir junto
 com o `send.php`. O empacotador aborta se algum faltar.
+
+O widget Turnstile **Contato Bocchi Company**, modo gerenciado e hostname
+`bocchi.company`, está na conta Cloudflare. A chave do site é pública e está nas
+duas páginas de contato. Copie `bocchi-turnstile.example.php` para
+`bocchi-turnstile.php` **um nível acima** do `public_html`, substitua o valor
+`secret` pela chave secreta do widget no painel e aplique modo `0600`. Não
+publique esse arquivo nem coloque a chave em GitHub Actions. O `send.php`
+responde 503 sem essa configuração, por segurança.
 
 **Efeito colateral aceito:** sem JavaScript o formulário deixa de enviar. As
 duas páginas de contato avisam disso em `<noscript>` e oferecem o e-mail direto.
@@ -227,7 +242,7 @@ explicitamente listado fica de fora. Hoje isso exclui:
 | `bocchi-*.example.php` | Modelos de credencial; os reais ficam acima do `public_html` |
 
 Além do allowlist há uma segunda barreira: qualquer caminho que case com
-`bocchi-smtp*.php`, `bocchi-oauth*.php`, `.env`, `.key`/`.pem` ou `smtp-diag*`
+`bocchi-smtp*.php`, `bocchi-oauth*.php`, `bocchi-turnstile*.php`, `.env`, `.key`/`.pem` ou `smtp-diag*`
 **aborta o empacotamento**, venha de onde vier. Se um dia um arquivo de
 credencial for parar dentro de `assets/` por engano, o `npm run package` falha
 em vez de publicá-lo.

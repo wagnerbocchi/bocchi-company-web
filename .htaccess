@@ -15,7 +15,7 @@
   # que o navegador trata como bloco de dados (não passa por script-src).
   # O hash que existia aqui não cobria nada e ficava obsoleto a cada edição.
   # Fontes agora são self-hosted: a CSP não precisa mais liberar o Google.
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 </IfModule>
 
 # --- Compressão ---
@@ -80,7 +80,7 @@ ErrorDocument 404 /404.html
 
 # --- Block direct HTTP access to backend include / secret / diagnostic files ---
 # (PHP `require` still works — this only blocks web requests.)
-<FilesMatch "^(smtp\.php|antispam\.php|smtp-diag.*\.php|bocchi-smtp.*\.php|bocchi-oauth.*\.php)$">
+<FilesMatch "^(smtp\.php|antispam\.php|turnstile\.php|smtp-diag.*\.php|bocchi-smtp.*\.php|bocchi-oauth.*\.php|bocchi-turnstile.*\.php)$">
   Require all denied
 </FilesMatch>
 

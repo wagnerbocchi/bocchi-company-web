@@ -239,13 +239,14 @@ jobs:
           # public_html e enxerga o próprio diretório como "/", então exigir
           # que o caminho contenha "public_html" reprovaria o destino certo e
           # aprovaria um "/" que, numa conta não presa, é a raiz da conta —
-          # onde moram bocchi-smtp.php, bocchi-oauth.php e .bocchi-state.
+          # onde moram bocchi-smtp.php, bocchi-oauth.php,
+          # bocchi-turnstile.php e .bocchi-state.
           # Listar e olhar o que tem lá dentro responde a pergunta de verdade:
           # "este diretório é a raiz do site?".
           lftp -c "$COMUM cd '$REMOTE_DIR'; cls -1;" > remoto.txt || {
             echo "não consegui listar $REMOTE_DIR no servidor"; exit 1; }
 
-          for proibido in bocchi-smtp.php bocchi-oauth.php .bocchi-state domains public_html; do
+          for proibido in bocchi-smtp.php bocchi-oauth.php bocchi-turnstile.php .bocchi-state domains public_html; do
             if grep -qxF "$proibido" remoto.txt; then
               echo "ABORTANDO: $REMOTE_DIR contém '$proibido' — isto é a raiz da conta, não o public_html."
               echo "Publicar aqui espalharia o site por cima das credenciais. Ajuste a variável FTP_REMOTE_DIR."
@@ -336,6 +337,7 @@ jobs:
           # O .htaccess é o que faz os headers de segurança e o bloqueio dos
           # includes funcionarem. Se ele não subiu, isto pega.
           verifica https://bocchi.company/antispam.php 403 || falhas=1
+          verifica https://bocchi.company/turnstile.php 403 || falhas=1
 
           # O www tem que redirecionar para o apex. Enquanto não redirecionava,
           # o site inteiro existia em duplicata e o Search Console contava as
